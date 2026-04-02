@@ -105,7 +105,7 @@
                  <div id="cameraView" class="hidden flex flex-col items-center">
                     <video id="videoElement" autoplay playsinline class="w-full rounded-xl bg-black mb-3 aspect-video object-cover"></video>
                     <div class="flex flex-wrap justify-center gap-2">
-                        <button type="button" onclick="takePhoto()" class="px-8 py-3 bg-blue-600 text-white rounded-full font-bold shadow-lg hover:bg-blue-700 transition-all">บันทึกรูป</button>
+                        <button type="button" onclick="takePhoto()" class="px-8 py-3 bg-blue-600 text-white rounded-full font-bold shadow-lg">บันทึกรูป</button>
                         <button type="button" onclick="switchCamera()" class="px-4 py-3 bg-slate-800 text-white rounded-full font-bold flex items-center gap-2">
                             <span id="iconSwitchPlaceholder"></span> สลับกล้อง
                         </button>
@@ -202,7 +202,7 @@
       try {
         const response = await fetch(API_URL, { method: 'POST', redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
         return await response.json();
-      } catch (e) { console.error(e); alert("การเชื่อมต่อฐานข้อมูลล้มเหลว"); return { status: 'error' }; }
+      } catch (e) { console.error(e); return { status: 'error' }; }
     }
 
     function viewLargeImage(src) {
@@ -394,14 +394,23 @@
       }
     }
 
+    // --- ส่วนที่แก้ไข: เพิ่มระบบรีเฟรช 3 วินาที ---
     function switchTab(t) {
       document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
       document.getElementById(`view-${t}`).classList.remove('hidden');
       document.querySelectorAll('.tab-btn').forEach(b => b.className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white");
       document.getElementById(`tab-${t}`).className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-lg";
+      
       if(t === 'report') document.getElementById(`view-${t}`).classList.add('flex');
+      
+      // ล้าง Interval เดิมก่อนเสมอเพื่อไม่ให้ซ้อนกัน
       clearInterval(appState.mcInterval);
-      if(t === 'mc') appState.mcInterval = setInterval(() => initApp(), 5000);
+      
+      // ถ้าเปลี่ยนมาหน้า 'พิธีกร (mc)' หรือ 'รายงาน (report)' ให้เริ่มดึงข้อมูลใหม่ทุก 3 วินาที
+      if(t === 'mc' || t === 'report') {
+          appState.mcInterval = setInterval(() => initApp(), 3000);
+      }
+      
       updateUI();
     }
 
@@ -431,32 +440,17 @@
     async function startCamera() {
       document.getElementById('cameraStartBtn').classList.add('hidden');
       document.getElementById('cameraView').classList.remove('hidden');
-      
-      // หยุดกล้องเดิมก่อนถ้ามี
-      if (stream) {
-          stream.getTracks().forEach(t => t.stop());
-      }
-
+      if (stream) stream.getTracks().forEach(t => t.stop());
       try {
-        const constraints = {
-            video: {
-                facingMode: currentFacingMode,
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
-            }
-        };
+        const constraints = { video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } } };
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         document.getElementById('videoElement').srcObject = stream;
-      } catch (e) {
-        console.error(e);
-        alert("ไม่สามารถเข้าถึงกล้องได้ครับคุณครูหนึ่ง กรุณาตรวจสอบสิทธิ์การใช้งานกล้อง");
-        stopCamera();
-      }
+      } catch (e) { console.error(e); alert("ไม่สามารถเข้าถึงกล้องได้"); stopCamera(); }
     }
 
     function switchCamera() {
         currentFacingMode = (currentFacingMode === 'user' ? 'environment' : 'user');
-        startCamera(); // เริ่มกล้องใหม่ด้วย facingMode ใหม่
+        startCamera();
     }
 
     function stopCamera() {
@@ -469,7 +463,7 @@
       const v = document.getElementById('videoElement');
       const c = document.createElement('canvas');
       const ctx = c.getContext('2d');
-      const s = 400 / v.videoWidth; // เก็บความละเอียดให้สูงขึ้นหน่อยเวลาขยายดู
+      const s = 400 / v.videoWidth;
       c.width = 400; 
       c.height = v.videoHeight * s;
       ctx.drawImage(v, 0, 0, c.width, c.height);
