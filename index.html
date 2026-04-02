@@ -7,338 +7,234 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
-    
-    body {
-      font-family: 'Sarabun', sans-serif;
-    }
-
+    body { font-family: 'Sarabun', sans-serif; overflow-x: hidden; }
     @media print {
       @page { size: A4 portrait; margin: 0mm; }
       body { margin: 0; background-color: white; }
       .print-hidden { display: none !important; }
       #print-area { width: 210mm !important; min-height: 297mm !important; padding: 20mm !important; margin: 0 auto !important; box-shadow: none !important; }
     }
-
-    .drag-handle:active { cursor: grabbing; }
-    
-    /* Animation สำหรับปุ่มอัปเดต */
+    .animate-save { animation: pulse-yellow 2s infinite; }
     @keyframes pulse-yellow {
       0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
       50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
     }
-    .animate-save { animation: pulse-yellow 2s infinite; }
+    .zoom-img { transition: transform 0.2s; cursor: zoom-in; }
+    .zoom-img:hover { transform: scale(1.1); }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
 
-  <!-- นำ URL ของ Google Apps Script มาใส่ตรงนี้ -->
   <script>
+    // *** เปลี่ยนเป็น URL ของ Google Apps Script ของคุณครูหนึ่ง ***
     const API_URL = 'https://script.google.com/macros/s/AKfycbxtHoSuxyJa-8yrbscOyAV328OClZFabVJqpKCyfedaS9KtHbwP96Qoqle5Q904Hb2X/exec';
   </script>
 
-  <!-- SVG Icons Library (Inline for reliability) -->
+  <!-- SVG Icons Library -->
   <div class="hidden">
-    <svg id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-    <svg id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
     <svg id="icon-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
     <svg id="icon-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-    <svg id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-    <svg id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-    <svg id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+    <svg id="icon-switch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7V3h-4"></path><path d="M3 17v4h4"></path><path d="M17 21h4v-4"></path><path d="M7 3H3v4"></path><path d="m5.6 18.4 4.4-4.4"></path><path d="m18.4 5.6-4.4 4.4"></path></svg>
   </div>
 
   <!-- Loading Overlay -->
   <div id="loadingOverlay" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center text-blue-800">
     <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-800 rounded-full animate-spin mb-4"></div>
-    <h2 class="text-xl font-bold">กำลังเชื่อมต่อฐานข้อมูล...</h2>
+    <h2 class="text-xl font-bold italic text-center px-4 tracking-wide">กำลังเตรียมระบบให้คุณครูหนึ่งผู้ใจดีที่สุดในจักรวาล...</h2>
   </div>
 
   <div id="syncingOverlay" class="fixed inset-0 bg-white/70 backdrop-blur-sm z-[100] hidden items-center justify-center">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl flex items-center gap-4 font-bold text-blue-800">
+    <div class="bg-white p-6 rounded-2xl shadow-2xl flex items-center gap-4 font-bold text-blue-800 border-2 border-blue-100">
       <div class="w-6 h-6 border-3 border-blue-200 border-t-blue-800 rounded-full animate-spin"></div>
-      กำลังอัปเดตข้อมูล...
+      กำลังอัปเดตฐานข้อมูล...
+    </div>
+  </div>
+
+  <!-- Image Modal -->
+  <div id="imageModal" onclick="closeImageModal()" class="hidden fixed inset-0 bg-black/90 z-[300] flex items-center justify-center p-4 cursor-pointer">
+    <div class="relative max-w-4xl w-full h-full flex items-center justify-center">
+        <img id="modalImg" src="" class="max-w-full max-h-full rounded-lg shadow-2xl border-4 border-white/20" />
+        <div class="absolute top-4 right-4 text-white font-bold text-2xl bg-white/20 w-12 h-12 flex items-center justify-center rounded-full hover:bg-red-500 transition-colors">✕</div>
     </div>
   </div>
 
   <!-- Navbar -->
   <nav class="bg-slate-900 text-white shadow-xl print-hidden">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="flex justify-between items-center h-16">
-        <div class="font-bold text-xl flex items-center gap-2 text-blue-400">
-          <div class="bg-blue-500/20 p-1.5 rounded-lg">
-            <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-          </div>
-          ระบบลงทะเบียนของที่ระลึก
+    <div class="max-w-7xl mx-auto px-4 flex justify-between items-center h-16">
+        <div class="font-bold text-lg flex items-center gap-2 text-blue-400 uppercase tracking-tighter">
+            SOUVENIR SYSTEM <span class="hidden sm:inline">| ระบบลงทะเบียนของที่ระลึก</span>
         </div>
-        <div class="flex bg-slate-800 p-1 rounded-xl gap-1">
-          <button onclick="switchTab('staff')" id="tab-staff" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-lg">สตาฟ (ลงทะเบียน)</button>
-          <button onclick="switchTab('mc')" id="tab-mc" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-700">พิธีกร (จอคิว)</button>
-          <button onclick="switchTab('report')" id="tab-report" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-700">รายงาน/พิมพ์</button>
+        <div class="flex bg-slate-800 p-1 rounded-xl">
+          <button onclick="switchTab('staff')" id="tab-staff" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-lg">สตาฟ</button>
+          <button onclick="switchTab('mc')" id="tab-mc" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400">พิธีกร</button>
+          <button onclick="switchTab('report')" id="tab-report" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400">รายงาน</button>
         </div>
-      </div>
     </div>
   </nav>
 
   <div class="max-w-7xl mx-auto px-4 py-6">
-    
-    <!-- STAFF VIEW -->
+    <!-- VIEW STAFF -->
     <div id="view-staff" class="view-section space-y-6">
-      
-      <!-- Event Selector -->
       <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-        <div class="flex justify-between items-center mb-3">
-          <label class="text-xs font-black text-slate-400 uppercase tracking-widest">ชื่องานปัจจุบัน</label>
-          <button onclick="document.getElementById('manageEventsModal').classList.remove('hidden')" class="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 transition bg-blue-50 px-3 py-1.5 rounded-full">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            จัดการรายชื่องาน
-          </button>
+        <div class="flex justify-between items-center mb-2">
+          <label class="text-xs font-black text-slate-400 uppercase tracking-widest italic">ชื่องานปัจจุบัน</label>
+          <button onclick="document.getElementById('manageEventsModal').classList.remove('hidden')" class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full hover:bg-blue-100 transition-colors">จัดการงาน</button>
         </div>
-        <select id="currentEventSelect" onchange="changeCurrentEvent()" class="w-full p-4 text-xl font-bold text-slate-900 border-2 border-slate-100 bg-slate-50 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-all appearance-none cursor-pointer">
-          <option value="">-- กำลังโหลดข้อมูล... --</option>
+        <select id="currentEventSelect" onchange="changeCurrentEvent()" class="w-full p-4 text-xl font-bold text-slate-900 border-2 border-slate-100 bg-slate-50 rounded-xl outline-none focus:border-blue-500 transition-all cursor-pointer shadow-sm">
+          <option value="">-- กำลังโหลดข้อมูล --</option>
         </select>
       </div>
 
       <div class="grid lg:grid-cols-5 gap-6">
-        <!-- Form -->
         <div class="lg:col-span-2 space-y-6">
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <h2 class="text-lg font-bold text-slate-800 mb-5 flex items-center gap-2">
-              <span class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
-              </span>
-              ลงทะเบียนใหม่
-            </h2>
-            <form onsubmit="handleSubmit(event)" class="space-y-4">
-              <div>
-                <label class="block text-sm font-bold text-slate-700 mb-1">ชื่อ-นามสกุล <span class="text-red-500">*</span></label>
-                <input required type="text" id="formName" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="ระบุชื่อผู้รับ..." />
-              </div>
+            <h2 class="text-lg font-bold text-slate-800 mb-5">ลงทะเบียนผู้มอบใหม่</h2>
+            <form onsubmit="handleSubmit(event)" id="regForm" class="space-y-4">
+              <input required type="text" id="formName" class="w-full p-4 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="ชื่อ-นามสกุล *" />
               <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-bold text-slate-700 mb-1">ตำแหน่ง</label>
-                  <input type="text" id="formPosition" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="ผู้อำนวยการ..." />
-                </div>
-                <div>
-                  <label class="block text-sm font-bold text-slate-700 mb-1">หน่วยงาน</label>
-                  <input type="text" id="formAddress" class="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="โรงเรียน/บริษัท..." />
-                </div>
+                <input type="text" id="formPosition" class="w-full p-4 border border-slate-200 rounded-xl outline-none" placeholder="ตำแหน่ง" />
+                <input type="text" id="formAddress" class="w-full p-4 border border-slate-200 rounded-xl outline-none" placeholder="หน่วยงาน/ที่อยู่" />
               </div>
-
+              
               <!-- Camera UI -->
               <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center">
-                <div id="cameraStartBtn">
-                  <button type="button" onclick="startCamera()" class="w-full p-3 bg-white hover:bg-slate-100 text-slate-600 rounded-xl border border-slate-200 font-bold flex items-center justify-center gap-2 transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    เปิดกล้องถ่ายภาพ
-                  </button>
-                </div>
-                <div id="cameraView" class="hidden flex-col items-center">
-                  <video id="videoElement" autoplay playsinline class="w-full rounded-xl bg-black mb-3 aspect-video object-cover"></video>
-                  <canvas id="canvasElement" class="hidden"></canvas>
-                  <div class="flex gap-2">
-                    <button type="button" onclick="takePhoto()" class="px-6 py-2 bg-blue-600 text-white rounded-full font-bold shadow-lg shadow-blue-200">กดถ่ายภาพ</button>
-                    <button type="button" onclick="stopCamera()" class="px-6 py-2 bg-white text-red-500 border border-red-200 rounded-full font-bold">ปิด</button>
-                  </div>
-                </div>
-                <div id="photoResult" class="hidden flex-col items-center">
-                  <img id="photoPreview" class="w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl mb-2 mx-auto" />
-                  <button type="button" onclick="retakePhoto()" class="text-xs font-bold text-blue-600 underline">ถ่ายภาพใหม่</button>
-                </div>
+                 <button type="button" id="cameraStartBtn" onclick="startCamera()" class="w-full p-4 bg-white text-slate-600 rounded-xl border font-bold hover:bg-slate-50 transition-colors">เปิดกล้องถ่ายของที่ระลึก</button>
+                 
+                 <div id="cameraView" class="hidden flex flex-col items-center">
+                    <video id="videoElement" autoplay playsinline class="w-full rounded-xl bg-black mb-3 aspect-video object-cover"></video>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button type="button" onclick="takePhoto()" class="px-8 py-3 bg-blue-600 text-white rounded-full font-bold shadow-lg hover:bg-blue-700 transition-all">บันทึกรูป</button>
+                        <button type="button" onclick="switchCamera()" class="px-4 py-3 bg-slate-800 text-white rounded-full font-bold flex items-center gap-2">
+                            <span id="iconSwitchPlaceholder"></span> สลับกล้อง
+                        </button>
+                        <button type="button" onclick="stopCamera()" class="px-6 py-3 bg-white text-slate-500 border rounded-full font-bold">ปิด</button>
+                    </div>
+                 </div>
+                 
+                 <div id="photoResult" class="hidden flex flex-col items-center">
+                    <img id="photoPreview" class="w-32 h-32 rounded-lg object-cover border-4 border-white shadow-xl cursor-zoom-in" onclick="viewLargeImage(this.src)" title="คลิกเพื่อดูรูปใหญ่" />
+                    <button type="button" onclick="retakePhoto()" class="text-xs font-bold text-blue-600 underline mt-2">ถ่ายภาพใหม่</button>
+                 </div>
               </div>
 
-              <button type="submit" id="submitBtn" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-100 transition-all active:scale-95 disabled:opacity-50">
-                ยืนยันลงทะเบียน
-              </button>
+              <button type="submit" id="submitBtn" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xl shadow-lg active:scale-95 transition-all">ลงทะเบียนและรันเลขคิว</button>
             </form>
           </div>
         </div>
 
-        <!-- Queue List -->
         <div class="lg:col-span-3">
           <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[700px]">
             <div class="flex justify-between items-center mb-6">
-              <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                <span class="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                </span>
-                ลำดับคิวในงาน (<span id="queueCount">0</span>)
-              </h2>
-              <button id="saveOrderBtn" onclick="saveQueueOrder()" class="hidden px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold shadow-lg animate-save flex items-center gap-2 transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                อัปเดตลำดับคิวไปจอพิธีกร
-              </button>
+              <h2 class="text-lg font-bold text-slate-800 italic">รายชื่อในคิวปัจจุบัน (<span id="queueCount">0</span>)</h2>
+              <button id="saveOrderBtn" onclick="saveQueueOrder()" class="hidden px-5 py-2.5 bg-amber-500 text-white rounded-xl font-bold shadow-xl animate-save flex items-center gap-2">อัปเดตลำดับจอพิธีกร</button>
             </div>
-
-            <div id="queueListContainer" class="overflow-y-auto space-y-3 pr-2">
-              <!-- JS will render items here -->
-            </div>
+            <div id="queueListContainer" class="overflow-y-auto space-y-3 pr-2 flex-1"></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- MC VIEW -->
-    <div id="view-mc" class="view-section hidden bg-slate-950 text-white min-h-[85vh] rounded-3xl p-10 shadow-2xl relative overflow-hidden">
-      <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
-      <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-600/10 rounded-full blur-[100px] pointer-events-none"></div>
-
-      <div class="text-center mb-12 relative z-10">
-        <p class="text-blue-400 font-bold tracking-widest uppercase mb-2">เรียลไทม์ • ลำดับการมอบของที่ระลึก</p>
-        <h1 id="mcCurrentEventTitle" class="text-5xl font-black text-white drop-shadow-lg italic"></h1>
+    <!-- VIEW MC -->
+    <div id="view-mc" class="view-section hidden bg-slate-950 text-white min-h-[85vh] rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+      <div class="text-center mb-12">
+        <p class="text-blue-400 font-bold tracking-[0.2em] uppercase mb-4 opacity-70">LIVE UPDATES • SEQUENCE</p>
+        <h1 id="mcCurrentEventTitle" class="text-3xl sm:text-6xl font-black text-white italic drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)]"></h1>
       </div>
-
-      <div id="mcQueueContainer" class="max-w-4xl mx-auto space-y-6 relative z-10">
-        <!-- MC items -->
-      </div>
+      <div id="mcQueueContainer" class="max-w-5xl mx-auto space-y-6"></div>
     </div>
 
-    <!-- REPORT VIEW -->
+    <!-- VIEW REPORT -->
     <div id="view-report" class="view-section hidden flex-col items-center">
-      <div class="w-full max-w-[210mm] bg-white p-4 rounded-2xl shadow-sm mb-6 flex flex-wrap justify-between items-center gap-4 border border-slate-200">
-        <div class="flex bg-slate-100 p-1 rounded-xl">
-          <button onclick="changeReportType('data')" id="btnReportData" class="px-6 py-2 rounded-lg text-sm font-bold bg-white text-blue-600 shadow-sm transition">ข้อมูลสรุป</button>
-          <button onclick="changeReportType('blank')" id="btnReportBlank" class="px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition">แบบฟอร์มเปล่า</button>
-        </div>
-        <div class="flex gap-2">
-          <button onclick="exportAsPDF()" class="bg-red-600 text-white px-5 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-red-100 hover:bg-red-700">บันทึก PDF</button>
-          <button onclick="window.print()" class="bg-slate-800 text-white px-5 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-900">สั่งพิมพ์</button>
-        </div>
-      </div>
-
-      <div id="print-area" class="bg-white w-[210mm] min-h-[297mm] shadow-2xl p-[20mm] mx-auto box-border border border-slate-100">
-        <!-- Report Content -->
-        <div class="text-center mb-10 border-b-2 border-slate-900 pb-6">
-          <h1 id="reportMainTitle" class="text-3xl font-bold mb-2">สรุปรายชื่อผู้รับของที่ระลึก</h1>
-          <h2 id="reportEventTitle" class="text-2xl text-slate-700 italic font-bold"></h2>
-          <div class="flex justify-between mt-8 text-sm font-bold">
-            <span id="reportDateText"></span>
-            <span id="reportPageText"></span>
+       <div class="w-full max-w-[210mm] bg-white p-4 rounded-2xl mb-6 flex flex-wrap justify-between items-center border shadow-sm gap-4">
+          <div class="flex bg-slate-100 p-1 rounded-xl">
+             <button onclick="changeReportType('data')" id="btnReportData" class="px-6 py-2 rounded-lg text-sm font-bold bg-white text-blue-600 shadow-sm transition">ข้อมูลสรุป</button>
+             <button onclick="changeReportType('blank')" id="btnReportBlank" class="px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition">แบบฟอร์มเปล่า</button>
           </div>
-        </div>
-        <table class="w-full border-2 border-slate-900">
-          <thead id="reportTableHeader"></thead>
-          <tbody id="reportTableBody"></tbody>
-        </table>
-        <div id="reportSignatures" class="mt-16 grid grid-cols-2 gap-10 hidden">
-          <div class="text-center">ผู้ลงบันทึก: ...............................................</div>
-          <div class="text-center">ผู้ตรวจสอบ: ...............................................</div>
-        </div>
-      </div>
+          <div class="flex gap-2">
+            <button onclick="exportAsImage()" class="bg-slate-700 text-white px-5 py-2 rounded-xl font-bold hover:bg-slate-800 transition">เซฟเป็นรูป</button>
+            <button onclick="exportAsPDF()" class="bg-red-600 text-white px-5 py-2 rounded-xl font-bold hover:bg-red-700 transition shadow-lg">บันทึก PDF</button>
+          </div>
+       </div>
+       <div id="print-area" class="bg-white w-[210mm] min-h-[297mm] shadow-2xl p-[15mm] mx-auto box-border border-2">
+          <div class="text-center mb-8 border-b-4 border-slate-900 pb-6">
+             <h1 id="reportMainTitle" class="text-3xl font-bold mb-1 italic">สรุปรายชื่อผู้มอบของที่ระลึก</h1>
+             <h2 id="reportEventTitle" class="text-2xl text-slate-700 italic font-bold"></h2>
+             <div class="flex justify-between mt-6 text-sm font-bold text-slate-600 px-4">
+                <span id="reportDateText"></span>
+                <span id="reportPageText"></span>
+             </div>
+          </div>
+          <table class="w-full border-collapse border-2 border-slate-900">
+             <thead id="reportTableHeader"></thead>
+             <tbody id="reportTableBody"></tbody>
+          </table>
+       </div>
     </div>
-
   </div>
 
   <!-- Manage Events Modal -->
   <div id="manageEventsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
-      <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-        <h3 class="font-black text-xl text-slate-800 flex items-center gap-2">
-          จัดการงานทั้งหมด
-        </h3>
-        <button onclick="document.getElementById('manageEventsModal').classList.add('hidden')" class="w-10 h-10 flex items-center justify-center bg-slate-200 hover:bg-red-100 text-slate-500 hover:text-red-600 rounded-full transition-all">✕</button>
+      <div class="p-6 border-b flex justify-between items-center bg-slate-50">
+        <h3 class="font-black text-xl">จัดการรายการงาน</h3>
+        <button onclick="document.getElementById('manageEventsModal').classList.add('hidden')" class="w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full hover:bg-red-500 hover:text-white transition-colors">✕</button>
       </div>
-      <div class="p-6 space-y-6">
-        <div>
-          <label class="block text-sm font-black text-slate-500 mb-2 uppercase tracking-widest">สร้างงานใหม่</label>
-          <div class="flex gap-2">
-            <input type="text" id="newEventName" class="flex-1 p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500" placeholder="พิมพ์ชื่อโครงการ..." />
-            <button onclick="handleAddEvent()" class="bg-green-600 text-white px-5 rounded-xl font-bold hover:bg-green-700">เพิ่ม</button>
-          </div>
+      <div class="p-6">
+        <div class="flex gap-2 mb-6">
+            <input type="text" id="newEventName" class="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-green-500" placeholder="ระบุชื่อโครงการใหม่..." />
+            <button onclick="handleAddEvent()" class="bg-green-600 text-white px-5 rounded-xl font-bold hover:bg-green-700 transition-colors">เพิ่ม</button>
         </div>
-        <div>
-          <label class="block text-sm font-black text-slate-500 mb-3 uppercase tracking-widest">รายการงานเดิม</label>
-          <div id="eventListModalContainer" class="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-            <!-- Events -->
-          </div>
-        </div>
+        <div id="eventListModalContainer" class="space-y-2 max-h-[300px] overflow-y-auto pr-2"></div>
       </div>
     </div>
   </div>
 
   <script>
-    // --- State & App Control ---
-    let appState = {
-      events: [],
-      currentEvent: '',
-      participants: [],
-      reportType: 'data',
-      photoDataUrl: null,
-      mcInterval: null,
-      givenIds: JSON.parse(localStorage.getItem('givenIds') || '[]')
-    };
-
+    let appState = { events: [], currentEvent: '', participants: [], reportType: 'data', photoDataUrl: null, mcInterval: null };
     let stream = null;
+    let currentFacingMode = 'user'; // เริ่มต้นที่กล้องหน้า
 
-    // Helper: Build SVG from library
-    function getIcon(id, customClass = "") {
-      const svg = document.getElementById(`icon-${id}`);
-      if (!svg) return "";
-      const clone = svg.cloneNode(true);
-      if (customClass) clone.setAttribute("class", customClass);
-      return clone.outerHTML;
-    }
+    function getIcon(id) { return document.getElementById(`icon-${id}`).outerHTML; }
 
     async function callAPI(payload) {
       try {
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          redirect: "follow",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload),
-        });
+        const response = await fetch(API_URL, { method: 'POST', redirect: "follow", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
         return await response.json();
-      } catch (error) {
-        console.error("API Error:", error);
-        alert("การเชื่อมต่อล้มเหลว กรุณาเช็คอินเทอร์เน็ตหรือการตั้งค่า Apps Script");
-        return { status: 'error' };
-      }
+      } catch (e) { console.error(e); alert("การเชื่อมต่อฐานข้อมูลล้มเหลว"); return { status: 'error' }; }
+    }
+
+    function viewLargeImage(src) {
+        if(!src) return;
+        document.getElementById('modalImg').src = src;
+        document.getElementById('imageModal').classList.remove('hidden');
+    }
+    function closeImageModal() {
+        document.getElementById('imageModal').classList.add('hidden');
     }
 
     async function initApp() {
       const result = await callAPI({ action: 'GET_ALL_DATA' });
       document.getElementById('loadingOverlay').classList.add('hidden');
+      document.getElementById('iconSwitchPlaceholder').innerHTML = getIcon('switch');
       if (result && result.status === 'success') {
         appState.events = result.events || [];
         appState.participants = result.participants || [];
-        if (appState.events.length > 0) appState.currentEvent = appState.events[0];
+        if (!appState.currentEvent && appState.events.length > 0) appState.currentEvent = appState.events[0];
         updateUI();
       }
     }
 
-    function showSyncing(show) {
-      const el = document.getElementById('syncingOverlay');
-      if (show) el.classList.remove('hidden');
-      else el.classList.add('hidden');
-    }
+    function showSyncing(show) { document.getElementById('syncingOverlay').classList[show ? 'remove' : 'add']('hidden'); }
 
-    // --- Core Actions ---
     async function handleAddEvent() {
-      const input = document.getElementById('newEventName');
-      const val = input.value.trim();
-      if (val && !appState.events.includes(val)) {
+      const val = document.getElementById('newEventName').value.trim();
+      if (val) {
         showSyncing(true);
-        const result = await callAPI({ action: 'ADD_EVENT', eventName: val });
-        if (result.status === 'success') {
-          appState.events.push(val);
-          appState.currentEvent = val;
-          input.value = '';
-          updateUI();
-        }
-        showSyncing(false);
-      }
-    }
-
-    async function handleDeleteEvent(eventName) {
-      if (confirm(`ลบงาน "${eventName}" และข้อมูลทั้งหมด?`)) {
-        showSyncing(true);
-        const result = await callAPI({ action: 'DELETE_EVENT', eventName: eventName });
-        if (result.status === 'success') {
-          appState.events = appState.events.filter(e => e !== eventName);
-          appState.participants = appState.participants.filter(p => p.event !== eventName);
-          if (appState.currentEvent === eventName) appState.currentEvent = appState.events[0] || '';
+        if ((await callAPI({ action: 'ADD_EVENT', eventName: val })).status === 'success') {
+          appState.events.push(val); appState.currentEvent = val; document.getElementById('newEventName').value = ''; 
+          document.getElementById('manageEventsModal').classList.add('hidden');
           updateUI();
         }
         showSyncing(false);
@@ -347,265 +243,252 @@
 
     async function handleSubmit(e) {
       e.preventDefault();
+      if(!appState.currentEvent) return alert('กรุณาเลือกงานก่อนลงทะเบียน');
       const name = document.getElementById('formName').value;
-      const pos = document.getElementById('formPosition').value;
-      const addr = document.getElementById('formAddress').value;
-
       showSyncing(true);
-      const result = await callAPI({
-        action: 'ADD_PARTICIPANT',
-        event: appState.currentEvent,
-        name: name,
-        position: pos || '-',
-        address: addr || '-',
-        photo: appState.photoDataUrl
+      const res = await callAPI({ 
+        action: 'ADD_PARTICIPANT', 
+        event: appState.currentEvent, 
+        name: name, 
+        position: document.getElementById('formPosition').value, 
+        address: document.getElementById('formAddress').value, 
+        photo: appState.photoDataUrl 
       });
-
-      if (result.status === 'success') {
-        appState.participants.push({
-          id: result.id,
-          event: appState.currentEvent,
-          order: result.order,
-          name: name,
-          position: pos || '-',
-          address: addr || '-',
-          photo: appState.photoDataUrl
+      if (res.status === 'success') {
+        appState.participants.push({ 
+            id: res.id, 
+            event: appState.currentEvent, 
+            order: res.order, 
+            name: name, 
+            position: document.getElementById('formPosition').value, 
+            address: document.getElementById('formAddress').value, 
+            photo: appState.photoDataUrl, 
+            isGiven: false,
+            souvenirId: res.souvenirId
         });
-        document.getElementById('regForm').reset();
-        retakePhoto();
-        stopCamera();
-        updateUI();
+        document.getElementById('regForm').reset(); retakePhoto(); updateUI();
       }
+      showSyncing(false);
+    }
+
+    async function toggleGiven(id) {
+      const p = appState.participants.find(x => x.id.toString() === id.toString());
+      if (!p) return;
+      const newStatus = !p.isGiven;
+      p.isGiven = newStatus;
+      updateUI();
+      showSyncing(true);
+      await callAPI({ action: 'TOGGLE_GIVEN', id: id, isGiven: newStatus });
       showSyncing(false);
     }
 
     async function handleDeleteParticipant(id) {
-      if (confirm('ยืนยันลบผู้ร่วมงานท่านนี้?')) {
-        showSyncing(true);
-        const result = await callAPI({ action: 'DELETE_PARTICIPANT', id: id });
-        if (result.status === 'success') {
-          appState.participants = appState.participants.filter(p => p.id !== id);
-          updateUI();
+        if(confirm('คุณต้องการลบข้อมูลผู้ลงทะเบียนท่านนี้ใช่หรือไม่?')) {
+            showSyncing(true);
+            const res = await callAPI({ action: 'DELETE_PARTICIPANT', id: id });
+            if(res.status === 'success') {
+                appState.participants = appState.participants.filter(p => p.id !== id);
+                updateUI();
+            }
+            showSyncing(false);
         }
-        showSyncing(false);
-      }
     }
 
     async function saveQueueOrder() {
-      const currentList = appState.participants.filter(p => p.event === appState.currentEvent).sort((a,b) => a.order - b.order);
-      const updates = currentList.map(p => ({ id: p.id, order: p.order }));
+      const list = appState.participants.filter(p => p.event === appState.currentEvent).sort((a,b) => a.order - b.order);
       showSyncing(true);
-      const result = await callAPI({ action: 'UPDATE_ORDER', updates: updates });
-      if (result.status === 'success') {
-        document.getElementById('saveOrderBtn').classList.add('hidden');
-      }
+      await callAPI({ action: 'UPDATE_ORDER', updates: list.map(p => ({ id: p.id, order: p.order })) });
+      document.getElementById('saveOrderBtn').classList.add('hidden');
       showSyncing(false);
     }
 
-    function toggleGiven(id) {
-      if (appState.givenIds.includes(id)) appState.givenIds = appState.givenIds.filter(x => x !== id);
-      else appState.givenIds.push(id);
-      localStorage.setItem('givenIds', JSON.stringify(appState.givenIds));
-      updateUI();
-    }
-
-    // --- Order Moving ---
-    function moveUp(index) {
-      if (index <= 0) return;
+    function moveUp(idx) {
       let list = appState.participants.filter(p => p.event === appState.currentEvent).sort((a,b) => a.order - b.order);
-      let others = appState.participants.filter(p => p.event !== appState.currentEvent);
-      
-      [list[index-1], list[index]] = [list[index], list[index-1]];
+      if (idx <= 0) return;
+      [list[idx-1], list[idx]] = [list[idx], list[idx-1]];
       list.forEach((p, i) => p.order = i + 1);
-      
-      appState.participants = [...others, ...list];
       document.getElementById('saveOrderBtn').classList.remove('hidden');
       updateUI();
     }
 
-    function moveDown(index) {
+    function moveDown(idx) {
       let list = appState.participants.filter(p => p.event === appState.currentEvent).sort((a,b) => a.order - b.order);
-      if (index >= list.length - 1) return;
-      let others = appState.participants.filter(p => p.event !== appState.currentEvent);
-      
-      [list[index+1], list[index]] = [list[index], list[index+1]];
+      if (idx >= list.length - 1) return;
+      [list[idx+1], list[idx]] = [list[idx], list[idx+1]];
       list.forEach((p, i) => p.order = i + 1);
-      
-      appState.participants = [...others, ...list];
       document.getElementById('saveOrderBtn').classList.remove('hidden');
       updateUI();
     }
 
-    // --- Camera ---
+    function updateUI() {
+      const sel = document.getElementById('currentEventSelect');
+      sel.innerHTML = appState.events.length ? appState.events.map(e => `<option value="${e}" ${e === appState.currentEvent ? 'selected' : ''}>${e}</option>`).join('') : '<option value="">-- กรุณาเพิ่มงานใหม่ในเมนูจัดการงาน --</option>';
+
+      const currentList = appState.participants.filter(p => p.event === appState.currentEvent).sort((a,b) => a.order - b.order);
+      document.getElementById('queueCount').innerText = currentList.length;
+
+      document.getElementById('eventListModalContainer').innerHTML = appState.events.map(e => `
+        <div class="flex justify-between items-center p-4 bg-slate-50 border rounded-xl hover:bg-white transition-all shadow-sm">
+            <span class="font-bold text-slate-700">${e}</span>
+            <button onclick="handleDeleteEvent('${e}')" class="text-red-400 hover:text-red-600 transition p-2 font-bold">ลบ</button>
+        </div>
+      `).join('') || '<p class="text-center text-slate-400 text-sm italic">ยังไม่มีรายการงาน</p>';
+
+      // Staff List
+      document.getElementById('queueListContainer').innerHTML = currentList.map((p, idx) => `
+        <div class="flex items-center gap-4 p-4 border rounded-2xl shadow-sm ${p.isGiven ? 'bg-emerald-50 opacity-80' : 'bg-white hover:border-blue-200'} transition-all">
+          <div class="flex flex-col gap-1 pr-3 border-r">
+            <button onclick="moveUp(${idx})" class="w-10 h-10 bg-slate-800 rounded-lg text-white flex items-center justify-center hover:bg-black transition-colors" ${idx===0?'disabled style="opacity:0.1"':''}>${getIcon('up')}</button>
+            <button onclick="moveDown(${idx})" class="w-10 h-10 bg-slate-800 rounded-lg text-white flex items-center justify-center hover:bg-black transition-colors" ${idx===currentList.length-1?'disabled style="opacity:0.1"':''}>${getIcon('down')}</button>
+          </div>
+          <div class="text-center min-w-[50px]">
+            <div class="text-[9px] font-black text-slate-400 leading-none uppercase">Queue</div>
+            <div class="text-2xl font-black text-slate-900 leading-tight">${p.order}</div>
+          </div>
+          <div class="w-14 h-14 bg-slate-200 rounded-lg flex-shrink-0 border-2 border-white shadow overflow-hidden">
+            ${p.photo ? `<img src="${p.photo}" class="w-full h-full object-cover zoom-img" onclick="viewLargeImage(this.src)">` : `<div class="w-full h-full flex items-center justify-center text-slate-400 italic text-[9px]">NO IMG</div>`}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[9px] font-black text-blue-500 uppercase">เลขที่ของที่ระลึก: ${p.souvenirId || '---'}</div>
+            <h4 class="font-black text-lg ${p.isGiven?'text-emerald-800 line-through opacity-50':'' } truncate leading-tight">${p.name}</h4>
+            <p class="text-xs text-slate-500 font-bold truncate">${p.position} | ${p.address}</p>
+          </div>
+          <div class="flex flex-col gap-2">
+            <button onclick="toggleGiven('${p.id}')" class="px-4 py-2 rounded-xl text-sm font-black border-2 transition shadow-sm active:scale-95 ${p.isGiven?'bg-emerald-600 text-white border-emerald-600':'bg-white text-slate-600 border-slate-200 hover:border-emerald-500'}">
+                ${p.isGiven ? 'มอบแล้ว' : 'ติ๊กมอบ'}
+            </button>
+            <button onclick="handleDeleteParticipant('${p.id}')" class="text-[9px] font-bold text-red-300 hover:text-red-500 text-right uppercase">Delete</button>
+          </div>
+        </div>
+      `).join('') || '<div class="h-full flex items-center justify-center text-slate-300 italic">ยังไม่มีใครลงทะเบียนครับคุณครูหนึ่ง</div>';
+
+      // MC View
+      document.getElementById('mcCurrentEventTitle').innerText = appState.currentEvent;
+      document.getElementById('mcQueueContainer').innerHTML = currentList.map((p, idx) => `
+        <div class="flex items-center gap-8 p-8 rounded-[40px] transition-all duration-700 ${p.isGiven ? 'bg-emerald-900/20 grayscale opacity-40 scale-95 border border-emerald-500/20' : (idx===0 ? 'bg-gradient-to-br from-blue-600 to-blue-800 scale-105 shadow-[0_20px_50px_rgba(37,99,235,0.4)] border-4 border-blue-400/50' : 'bg-slate-900')}">
+          <div class="w-24 h-24 rounded-3xl flex-shrink-0 flex items-center justify-center text-5xl font-black italic shadow-inner ${idx===0 ? 'bg-white text-blue-900 rotate-[-5deg]' : 'bg-slate-800 text-slate-500'}">${p.order}</div>
+          ${p.photo ? `<img src="${p.photo}" class="w-32 h-32 rounded-3xl border-4 border-white/20 object-cover shadow-2xl zoom-img" onclick="viewLargeImage(this.src)">` : ''}
+          <div class="flex-1 text-left">
+            <div class="text-sm font-bold text-blue-400 tracking-widest mb-1">รหัสของที่ระลึก: ${p.souvenirId || '---'}</div>
+            <h2 class="font-black ${idx===0 ? 'text-6xl text-white' : 'text-4xl'}">${p.isGiven?'✓ ':''}${p.name}</h2>
+            <p class="font-bold italic ${idx===0 ? 'text-3xl text-blue-100' : 'text-2xl text-slate-500'}">${p.position} | ${p.address}</p>
+          </div>
+          ${p.isGiven ? '<div class="text-emerald-400 font-black text-3xl border-4 border-emerald-400 px-8 py-3 rounded-3xl rotate-6 bg-emerald-400/10">มอบแล้ว</div>' : ''}
+        </div>
+      `).join('');
+
+      // Report View
+      document.getElementById('reportEventTitle').innerText = appState.currentEvent || '';
+      document.getElementById('reportDateText').innerText = `วันที่พิมพ์: ${new Date().toLocaleDateString('th-TH')}`;
+      document.getElementById('reportPageText').innerText = `จำนวนผู้มอบ: ${currentList.length} ท่าน`;
+      const rHeader = document.getElementById('reportTableHeader');
+      const rBody = document.getElementById('reportTableBody');
+
+      if(appState.reportType === 'data') {
+        rHeader.innerHTML = `<tr class="bg-slate-900 text-white"><th class="border border-slate-900 p-2 w-16">คิว</th><th class="border border-slate-900 p-2 w-20 text-[10px]">เลขที่ของ</th><th class="border border-slate-900 p-2 w-20">ภาพ</th><th class="border border-slate-900 p-2 text-left w-1/3">ชื่อ-นามสกุล</th><th class="border border-slate-900 p-2 text-left">ตำแหน่ง/หน่วยงาน</th></tr>`;
+        rBody.innerHTML = currentList.map(p => `<tr><td class="border border-slate-900 p-3 text-center font-bold text-xl bg-slate-50">${p.order}</td><td class="border border-slate-900 p-3 text-center font-black text-blue-700">${p.souvenirId || '-'}</td><td class="border border-slate-900 p-1 text-center">${p.photo ? `<img src="${p.photo}" class="w-12 h-12 object-cover rounded mx-auto border shadow-sm">` : '-'}</td><td class="border border-slate-900 p-3 font-bold text-lg">${p.isGiven?'[✓] ':''}${p.name}</td><td class="border border-slate-900 p-3 text-sm font-bold text-slate-600 leading-tight">${p.position}<br/><span class="text-[10px] text-slate-400 font-normal">${p.address}</span></td></tr>`).join('') || '<tr><td colspan="5" class="p-10 text-center italic text-slate-400">ยังไม่มีข้อมูลสำหรับออกรายงาน</td></tr>';
+      } else {
+        rHeader.innerHTML = `<tr class="bg-slate-100 text-slate-900"><th class="border-2 border-slate-900 p-2 w-16">ลำดับ</th><th class="border-2 border-slate-900 p-2 w-1/3">ชื่อ-นามสกุล</th><th class="border-2 border-slate-900 p-2">ตำแหน่ง</th><th class="border-2 border-slate-900 p-2">หน่วยงาน/ที่อยู่</th><th class="border-2 border-slate-900 p-2 w-24">หมายเหตุ</th></tr>`;
+        let h = ''; for(let i=1;i<=20;i++) h += `<tr><td class="border-2 border-slate-900 p-4 h-14 text-center font-bold">${i}</td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td></tr>`;
+        rBody.innerHTML = h;
+      }
+    }
+
+    function switchTab(t) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`view-${t}`).classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(b => b.className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white");
+      document.getElementById(`tab-${t}`).className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-lg";
+      if(t === 'report') document.getElementById(`view-${t}`).classList.add('flex');
+      clearInterval(appState.mcInterval);
+      if(t === 'mc') appState.mcInterval = setInterval(() => initApp(), 5000);
+      updateUI();
+    }
+
+    async function exportAsImage() {
+        showSyncing(true);
+        const el = document.getElementById('print-area');
+        const canvas = await html2canvas(el, { scale: 3 });
+        const link = document.createElement('a');
+        link.download = `สรุปรายชื่อผู้มอบ_${appState.currentEvent}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showSyncing(false);
+    }
+
+    async function exportAsPDF() {
+      showSyncing(true);
+      const e = document.getElementById('print-area');
+      const c = await html2canvas(e, { scale: 3 });
+      const img = c.toDataURL('image/png');
+      const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+      pdf.addImage(img, 'PNG', 0, 0, 210, (c.height * 210) / c.width);
+      pdf.save(`รายงานผู้มอบของที่ระลึก_${appState.currentEvent}.pdf`);
+      showSyncing(false);
+    }
+
+    // --- Camera Functions ---
     async function startCamera() {
       document.getElementById('cameraStartBtn').classList.add('hidden');
       document.getElementById('cameraView').classList.remove('hidden');
+      
+      // หยุดกล้องเดิมก่อนถ้ามี
+      if (stream) {
+          stream.getTracks().forEach(t => t.stop());
+      }
+
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        const constraints = {
+            video: {
+                facingMode: currentFacingMode,
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
         document.getElementById('videoElement').srcObject = stream;
       } catch (e) {
-        alert("ไม่สามารถเข้าถึงกล้องได้");
+        console.error(e);
+        alert("ไม่สามารถเข้าถึงกล้องได้ครับคุณครูหนึ่ง กรุณาตรวจสอบสิทธิ์การใช้งานกล้อง");
         stopCamera();
       }
     }
+
+    function switchCamera() {
+        currentFacingMode = (currentFacingMode === 'user' ? 'environment' : 'user');
+        startCamera(); // เริ่มกล้องใหม่ด้วย facingMode ใหม่
+    }
+
     function stopCamera() {
       if (stream) stream.getTracks().forEach(t => t.stop());
       document.getElementById('cameraView').classList.add('hidden');
       document.getElementById('cameraStartBtn').classList.remove('hidden');
     }
+
     function takePhoto() {
       const v = document.getElementById('videoElement');
-      const c = document.getElementById('canvasElement');
+      const c = document.createElement('canvas');
       const ctx = c.getContext('2d');
-      const s = 150 / v.videoWidth;
-      c.width = 150; c.height = v.videoHeight * s;
+      const s = 400 / v.videoWidth; // เก็บความละเอียดให้สูงขึ้นหน่อยเวลาขยายดู
+      c.width = 400; 
+      c.height = v.videoHeight * s;
       ctx.drawImage(v, 0, 0, c.width, c.height);
-      appState.photoDataUrl = c.toDataURL('image/jpeg', 0.5);
+      appState.photoDataUrl = c.toDataURL('image/jpeg', 0.8);
       stopCamera();
       document.getElementById('cameraStartBtn').classList.add('hidden');
       document.getElementById('photoResult').classList.remove('hidden');
       document.getElementById('photoPreview').src = appState.photoDataUrl;
     }
+
     function retakePhoto() {
       appState.photoDataUrl = null;
       document.getElementById('photoResult').classList.add('hidden');
       startCamera();
     }
 
-    // --- UI Rendering ---
-    function updateUI() {
-      // 1. Selector & Modal
-      const sel = document.getElementById('currentEventSelect');
-      sel.innerHTML = appState.events.length ? '' : '<option value="">-- กรุณาเพิ่มงานใหม่ --</option>';
-      appState.events.forEach(e => {
-        sel.innerHTML += `<option value="${e}" ${e === appState.currentEvent ? 'selected' : ''}>${e}</option>`;
-      });
+    function changeReportType(t) { appState.reportType = t; updateUI(); }
+    function changeCurrentEvent() { appState.currentEvent = document.getElementById('currentEventSelect').value; updateUI(); }
 
-      const modalEvents = document.getElementById('eventListModalContainer');
-      modalEvents.innerHTML = appState.events.map(e => `
-        <div class="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-xl group hover:bg-white hover:border-blue-200 transition">
-          <span class="font-bold text-slate-700">${e}</span>
-          <button onclick="handleDeleteEvent('${e}')" class="text-slate-400 hover:text-red-600 transition p-2">${getIcon('trash', 'w-4 h-4')}</button>
-        </div>
-      `).join('') || '<p class="text-center text-slate-400 text-sm italic">ยังไม่มีงานในระบบ</p>';
-
-      // 2. Staff Queue List
-      const currentList = appState.participants.filter(p => p.event === appState.currentEvent).sort((a,b) => a.order - b.order);
-      document.getElementById('queueCount').innerText = currentList.length;
-      const listContainer = document.getElementById('queueListContainer');
-      
-      listContainer.innerHTML = currentList.length ? currentList.map((p, idx) => {
-        const isGiven = appState.givenIds.includes(p.id.toString());
-        return `
-        <div class="flex items-center gap-4 p-4 border border-slate-100 rounded-2xl transition-all shadow-sm ${isGiven ? 'bg-emerald-50 border-emerald-200' : 'bg-white hover:shadow-md'}">
-          <!-- Arrows -->
-          <div class="flex flex-col gap-1 border-r border-slate-100 pr-3 mr-1">
-            <button onclick="moveUp(${idx})" ${idx === 0 ? 'disabled' : ''} class="w-10 h-10 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-lg flex items-center justify-center transition-colors disabled:opacity-10 text-slate-900">${getIcon('up', 'w-6 h-6')}</button>
-            <button onclick="moveDown(${idx})" ${idx === currentList.length - 1 ? 'disabled' : ''} class="w-10 h-10 bg-slate-100 hover:bg-slate-900 hover:text-white rounded-lg flex items-center justify-center transition-colors disabled:opacity-10 text-slate-900">${getIcon('down', 'w-6 h-6')}</button>
-          </div>
-          
-          <div class="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center font-black text-xl border-2 ${isGiven ? 'bg-emerald-600 border-white text-white' : 'bg-slate-900 border-slate-900 text-white shadow-lg'}">
-            ${p.order}
-          </div>
-
-          ${p.photo ? `<img src="${p.photo}" class="w-14 h-14 rounded-full object-cover border-2 border-white shadow-md ${isGiven ? 'grayscale opacity-50' : ''}">` : `<div class="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 border border-slate-200">${getIcon('user', 'w-6 h-6')}</div>`}
-
-          <div class="flex-1 min-w-0">
-            <h4 class="font-black text-lg ${isGiven ? 'text-emerald-800 line-through opacity-60' : 'text-slate-900'}">${p.name}</h4>
-            <p class="text-sm ${isGiven ? 'text-emerald-600' : 'text-slate-400'} font-bold">${p.position} • ${p.address}</p>
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <button onclick="toggleGiven('${p.id}')" class="px-4 py-2 rounded-xl text-sm font-black flex items-center gap-2 border-2 transition-all shadow-sm ${isGiven ? 'bg-emerald-600 border-emerald-600 text-white shadow-emerald-100' : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-500 hover:text-emerald-600'}">
-              ${isGiven ? getIcon('check', 'w-4 h-4') + ' มอบแล้ว' : 'ติ๊กมอบ'}
-            </button>
-            <button onclick="handleDeleteParticipant('${p.id}')" class="text-xs text-red-400 hover:text-red-600 font-bold opacity-30 hover:opacity-100 px-4 transition-all">ลบข้อมูล</button>
-          </div>
-        </div>
-        `;
-      }).join('') : '<div class="h-full flex flex-col items-center justify-center text-slate-300 italic"><p>ยังไม่มีผู้ลงทะเบียนในงานนี้</p></div>';
-
-      // 3. MC View
-      const mcContainer = document.getElementById('mcQueueContainer');
-      document.getElementById('mcCurrentEventTitle').innerText = appState.currentEvent;
-      mcContainer.innerHTML = currentList.length ? currentList.map((p, idx) => {
-        const isGiven = appState.givenIds.includes(p.id.toString());
-        return `
-        <div class="flex items-center gap-8 p-8 rounded-[40px] transition-all duration-700 ${isGiven ? 'bg-emerald-900/20 border border-emerald-500/20 grayscale opacity-40 scale-95' : (idx===0 ? 'bg-gradient-to-br from-blue-600 to-blue-800 scale-105 shadow-[0_30px_60px_-15px_rgba(37,99,235,0.4)] ring-4 ring-blue-400/30' : 'bg-slate-900 border border-slate-800')}">
-          <div class="w-24 h-24 rounded-3xl flex-shrink-0 flex items-center justify-center text-5xl font-black italic ${idx===0 ? 'bg-white text-blue-900 rotate-[-10deg]' : 'bg-slate-800 text-slate-500'}">
-            ${p.order}
-          </div>
-          ${p.photo ? `<img src="${p.photo}" class="w-28 h-28 rounded-full border-8 border-slate-800 object-cover shadow-2xl ${idx===0 ? 'border-white/20' : ''}">` : ''}
-          <div class="flex-1">
-            <h2 class="font-black ${idx===0 ? 'text-5xl text-white mb-2' : 'text-3xl text-slate-200'}">${isGiven ? '<span class="mr-3">✓</span>' : ''}${p.name}</h2>
-            <p class="font-bold tracking-wide ${idx===0 ? 'text-2xl text-blue-100' : 'text-xl text-slate-500'}">${p.position} <span class="mx-2 opacity-30">|</span> ${p.address}</p>
-          </div>
-          ${isGiven ? '<div class="text-emerald-400 font-black text-2xl rotate-12 bg-emerald-400/10 px-6 py-2 border-2 border-emerald-400/30 rounded-2xl">มอบแล้ว</div>' : ''}
-        </div>
-        `;
-      }).join('') : '<p class="text-center text-slate-700 text-2xl italic">กำลังรอผู้ลงทะเบียนเข้าร่วมงาน...</p>';
-
-      // 4. Report View
-      document.getElementById('reportEventTitle').innerText = appState.currentEvent || '';
-      document.getElementById('reportDateText').innerText = `พิมพ์วันที่: ${new Date().toLocaleDateString('th-TH')}`;
-      const rHeader = document.getElementById('reportTableHeader');
-      const rBody = document.getElementById('reportTableBody');
-
-      if(appState.reportType === 'data') {
-        rHeader.innerHTML = `<tr class="bg-slate-100 text-slate-900"><th class="border-2 border-slate-900 p-2 w-16">ลำดับ</th><th class="border-2 border-slate-900 p-2 w-20">ภาพ</th><th class="border-2 border-slate-900 p-2 text-left w-1/3">ชื่อ-นามสกุล</th><th class="border-2 border-slate-900 p-2 text-left w-1/4">ตำแหน่ง</th><th class="border-2 border-slate-900 p-2 text-left">ที่อยู่/หน่วยงาน</th></tr>`;
-        rBody.innerHTML = currentList.map(p => {
-          const g = appState.givenIds.includes(p.id.toString());
-          return `<tr><td class="border-2 border-slate-900 p-3 text-center font-bold text-xl">${p.order}</td><td class="border-2 border-slate-900 p-2 text-center">${p.photo ? `<img src="${p.photo}" class="w-12 h-12 object-cover rounded-full mx-auto">` : '-'}</td><td class="border-2 border-slate-900 p-3 font-bold text-lg">${g ? '<span class="text-emerald-600">✓</span> ' : ''}${p.name}</td><td class="border-2 border-slate-900 p-3">${p.position}</td><td class="border-2 border-slate-900 p-3">${p.address}</td></tr>`;
-        }).join('');
-        document.getElementById('reportSignatures').classList.add('hidden');
-      } else {
-        rHeader.innerHTML = `<tr class="bg-slate-100 text-slate-900"><th class="border-2 border-slate-900 p-2 w-16">ลำดับ</th><th class="border-2 border-slate-900 p-2 text-left w-1/3">ชื่อ-นามสกุล</th><th class="border-2 border-slate-900 p-2 text-left w-1/4">ตำแหน่ง</th><th class="border-2 border-slate-900 p-2 text-left">ที่อยู่/หน่วยงาน</th><th class="border-2 border-slate-900 p-2 w-24">หมายเหตุ</th></tr>`;
-        let h = ''; for(let i=1;i<=20;i++) h += `<tr><td class="border-2 border-slate-900 p-4 h-14 text-center font-bold">${i}</td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td></tr>`;
-        rBody.innerHTML = h;
-        document.getElementById('reportSignatures').classList.remove('hidden');
-      }
-    }
-
-    function switchTab(t) {
-      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white hover:bg-slate-700");
-      
-      document.getElementById(`view-${t}`).classList.remove('hidden');
-      if(t === 'report') document.getElementById(`view-${t}`).classList.add('flex');
-      document.getElementById(`tab-${t}`).className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-lg";
-
-      clearInterval(appState.mcInterval);
-      if(t === 'mc') appState.mcInterval = setInterval(() => initApp(), 5000);
-    }
-
-    function changeReportType(type) {
-      appState.reportType = type;
-      document.getElementById('btnReportData').className = type === 'data' ? "px-6 py-2 rounded-lg text-sm font-bold bg-white text-blue-600 shadow-sm transition" : "px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition";
-      document.getElementById('btnReportBlank').className = type === 'blank' ? "px-6 py-2 rounded-lg text-sm font-bold bg-white text-blue-600 shadow-sm transition" : "px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-800 transition";
-      updateUI();
-    }
-
-    async function exportAsPDF() {
-      const e = document.getElementById('print-area');
-      const c = await html2canvas(e, { scale: 2, useCORS: true });
-      const img = c.toDataURL('image/png');
-      const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
-      const w = 210, h = 297;
-      const ih = (c.height * w) / c.width;
-      let left = ih, pos = 0;
-      pdf.addImage(img, 'PNG', 0, pos, w, ih);
-      left -= h;
-      while(left > 0) { pos -= h; pdf.addPage(); pdf.addImage(img, 'PNG', 0, pos, w, ih); left -= h; }
-      pdf.save(`รายงาน_${appState.currentEvent}.pdf`);
-    }
-
-    function changeCurrentEvent() {
-      appState.currentEvent = document.getElementById('currentEventSelect').value;
-      document.getElementById('saveOrderBtn').classList.add('hidden');
-      updateUI();
-    }
-
-    // Start App
     initApp();
   </script>
 </body>
