@@ -47,6 +47,7 @@
 <body class="bg-slate-50 text-slate-900">
 
   <script>
+    // *** นำ URL ของคุณครูหนึ่งมาใส่ที่นี่ ***
     const API_URL = 'https://script.google.com/macros/s/AKfycbxtHoSuxyJa-8yrbscOyAV328OClZFabVJqpKCyfedaS9KtHbwP96Qoqle5Q904Hb2X/exec';
   </script>
 
@@ -119,7 +120,7 @@
                 <input type="text" id="formAddress" class="w-full p-4 border border-slate-200 rounded-xl outline-none" placeholder="หน่วยงาน/ที่อยู่" />
               </div>
               <div class="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center">
-                 <button type="button" id="cameraStartBtn" onclick="startCamera()" class="w-full p-4 bg-white text-slate-600 rounded-xl border font-bold hover:bg-slate-50">เปิดกล้องถ่ายของที่ระลึก</button>
+                 <button type="button" id="cameraStartBtn" onclick="startCamera()" class="w-full p-4 bg-white text-slate-600 rounded-xl border font-bold hover:bg-slate-50 transition-colors">เปิดกล้องถ่ายของที่ระลึก</button>
                  <div id="cameraView" class="hidden flex flex-col items-center">
                     <video id="videoElement" autoplay playsinline class="w-full rounded-xl bg-black mb-3 aspect-video object-cover"></video>
                     <div class="flex gap-2">
@@ -157,7 +158,7 @@
       </div>
     </div>
 
-    <!-- VIEW DISPLAY (หน้าจอแสดงผลคิวใหญ่ - ปรับปรุงใหม่) -->
+    <!-- VIEW DISPLAY -->
     <div id="view-display" class="view-section hidden min-h-[85vh] flex flex-col items-center justify-center space-y-10 py-10 bg-white rounded-[50px] shadow-2xl border-4 border-slate-100">
         <div class="text-center">
             <h1 class="text-3xl font-black text-slate-400 uppercase tracking-[0.4em] mb-3">Souvenir Sequence</h1>
@@ -165,19 +166,16 @@
         </div>
 
         <div class="w-full max-w-5xl space-y-12 px-8">
-            <!-- ลำดับที่กำลังมอบ -->
             <div id="displayNowContainer" class="display-card-now rounded-[50px] p-16 text-white text-center border-b-8 border-blue-900">
-                <!-- Content here by JS -->
+                <!-- Content here -->
             </div>
-
-            <!-- ลำดับถัดไป -->
             <div id="displayNextContainer" class="display-card-next rounded-[40px] p-12 text-white/90 text-center opacity-90 scale-95 border-b-8 border-slate-800">
-                <!-- Content here by JS -->
+                <!-- Content here -->
             </div>
         </div>
         
-        <div id="displayEmpty" class="hidden flex flex-col items-center justify-center p-20 text-slate-300 italic text-4xl">
-            กำลังรอผู้มอบลำดับถัดไป...
+        <div id="displayEmpty" class="hidden flex flex-col items-center justify-center p-20 text-slate-300 italic text-4xl text-center">
+            กำลังรอผู้ลงทะเบียนเข้าร่วมงาน...
         </div>
     </div>
 
@@ -229,7 +227,7 @@
       <div class="p-6">
         <div class="flex gap-2 mb-6">
             <input type="text" id="newEventName" class="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-green-500" placeholder="ชื่อโครงการใหม่..." />
-            <button onclick="handleAddEvent()" class="bg-green-600 text-white px-5 rounded-xl font-bold hover:bg-green-700">เพิ่ม</button>
+            <button onclick="handleAddEvent()" class="bg-green-600 text-white px-5 rounded-xl font-bold hover:bg-green-700 transition-colors">เพิ่ม</button>
         </div>
         <div id="eventListModalContainer" class="space-y-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin"></div>
       </div>
@@ -310,6 +308,20 @@
       }
     }
 
+    async function handleDeleteEvent(eventName) {
+        if (confirm(`คุณต้องการลบงาน "${eventName}" ใช่หรือไม่?`)) {
+            showSyncing(true);
+            const res = await callAPI({ action: 'DELETE_EVENT', eventName: eventName });
+            if (res.status === 'success') {
+                appState.events = appState.events.filter(e => e !== eventName);
+                appState.participants = appState.participants.filter(p => p.event !== eventName);
+                if (appState.currentEvent === eventName) appState.currentEvent = appState.events[0] || '';
+                updateUI();
+            }
+            showSyncing(false);
+        }
+    }
+
     async function handleSubmit(e) {
       e.preventDefault();
       if(!appState.currentEvent) return alert('กรุณาเลือกงานก่อนลงทะเบียน');
@@ -332,6 +344,18 @@
       showSyncing(true);
       await callAPI({ action: 'TOGGLE_GIVEN', id: id, isGiven: newStatus });
       showSyncing(false);
+    }
+
+    async function handleDeleteParticipant(id) {
+        if(confirm('ลบข้อมูลท่านนี้?')) {
+            showSyncing(true);
+            const res = await callAPI({ action: 'DELETE_PARTICIPANT', id: id });
+            if(res.status === 'success') {
+                appState.participants = appState.participants.filter(p => p.id !== id);
+                updateUI();
+            }
+            showSyncing(false);
+        }
     }
 
     async function saveQueueOrder() {
@@ -373,13 +397,15 @@
       sel.innerHTML = appState.events.length ? appState.events.map(e => `<option value="${e}" ${e === appState.currentEvent ? 'selected' : ''}>${e}</option>`).join('') : '<option value="">-- กรุณาเพิ่มงานใหม่ --</option>';
       document.getElementById('queueCount').innerText = currentList.length;
 
+      document.getElementById('eventListModalContainer').innerHTML = appState.events.map(e => `<div class="flex justify-between items-center p-4 bg-slate-50 border rounded-xl hover:bg-white transition-all shadow-sm"><span class="font-bold text-slate-700">${e}</span><button onclick="handleDeleteEvent('${e}')" class="text-red-400 hover:text-red-600 transition p-2 font-bold text-xs">ลบงาน</button></div>`).join('') || '<p class="text-center text-slate-400 text-sm italic">ยังไม่มีรายการงาน</p>';
+
       // Staff List
       document.getElementById('queueListContainer').innerHTML = currentList.map((p, idx) => {
         const canMoveUp = idx > 0 && !p.isGiven && !currentList[idx-1].isGiven;
         const canMoveDown = idx < currentList.length - 1 && !p.isGiven && !currentList[idx+1].isGiven;
         return `<div class="flex items-center gap-4 p-4 border rounded-2xl shadow-sm ${p.isGiven ? 'bg-emerald-50 opacity-80' : 'bg-white hover:border-blue-200'} transition-all"><div class="flex flex-col gap-1 pr-3 border-r"><button onclick="moveUp(${idx})" class="w-10 h-10 bg-slate-800 rounded-lg text-white flex items-center justify-center hover:bg-black transition-colors" ${!canMoveUp ? 'disabled style="opacity:0.1; cursor:not-allowed;"' : ''}>${getIcon('up', 'w-6 h-6')}</button><button onclick="moveDown(${idx})" class="w-10 h-10 bg-slate-800 rounded-lg text-white flex items-center justify-center hover:bg-black transition-colors" ${!canMoveDown ? 'disabled style="opacity:0.1; cursor:not-allowed;"' : ''}>${getIcon('down', 'w-6 h-6')}</button></div><div class="text-center min-w-[50px]"><div class="text-[9px] font-black text-slate-400 leading-none uppercase">Queue</div><div class="text-2xl font-black text-slate-900 leading-tight">${p.order}</div></div><div class="w-14 h-14 bg-slate-200 rounded-lg flex-shrink-0 border-2 border-white shadow overflow-hidden">${p.photo ? `<img src="${p.photo}" class="w-full h-full object-cover zoom-img" onclick="viewLargeImage(this.src)">` : `<div class="w-full h-full flex items-center justify-center text-slate-400 italic text-[9px]">NO IMG</div>`}</div><div class="flex-1 min-w-0"><div class="text-[9px] font-black text-blue-500 uppercase flex items-center gap-1">${p.isGiven ? getIcon('lock', 'w-2.5 h-2.5 text-emerald-600 mb-0.5') : ''}เลขที่ของที่ระลึก: ${formatSid(p.souvenirId)}</div><h4 class="font-black text-lg ${p.isGiven?'text-emerald-800 line-through opacity-50':'' } truncate leading-tight">${p.name}</h4><p class="text-xs text-slate-500 font-bold truncate">${p.position} | ${p.address}</p></div><div class="flex flex-col gap-2"><button onclick="toggleGiven('${p.id}')" class="px-4 py-2 rounded-xl text-sm font-black border-2 transition shadow-sm active:scale-95 ${p.isGiven?'bg-emerald-600 text-white border-emerald-600':'bg-white text-slate-600 border-slate-200 hover:border-emerald-500'}">${p.isGiven ? 'มอบแล้ว' : 'ติ๊กมอบ'}</button><button onclick="handleDeleteParticipant('${p.id}')" class="text-[9px] font-bold text-red-300 hover:text-red-500 text-right uppercase">Delete</button></div></div>`}).join('') || '<div class="h-full flex items-center justify-center text-slate-300 italic text-center px-4">ยังไม่มีใครลงทะเบียนครับคุณครูหนึ่งคนหล่อ</div>';
 
-      // --- New UI: Display View (Only Names) ---
+      // Display View (Names Only)
       document.getElementById('displayCurrentEventTitle').innerText = appState.currentEvent;
       const nowContainer = document.getElementById('displayNowContainer');
       const nextContainer = document.getElementById('displayNextContainer');
@@ -388,44 +414,47 @@
       if (pendingList.length > 0) {
         displayEmpty.classList.add('hidden');
         nowContainer.parentElement.classList.remove('hidden');
-        
         const now = pendingList[0];
         const next = pendingList.length > 1 ? pendingList[1] : null;
 
-        // ปรับแก้ให้โชว์เฉพาะชื่อ ไม่โชว์รูปและเลขลำดับ
-        nowContainer.innerHTML = `
-          <div>
-            <p class="text-blue-100 font-bold text-2xl uppercase tracking-[0.2em] mb-4 opacity-80 italic">กำลังดำเนินการมอบ / CURRENTLY PRESENTING</p>
-            <h3 class="text-8xl font-black text-white leading-tight mb-4 drop-shadow-2xl">${now.name}</h3>
-            <div class="h-1 w-32 bg-white/30 mx-auto mb-4 rounded-full"></div>
-            <p class="text-4xl text-blue-100 italic font-semibold opacity-90">${now.position} | ${now.address}</p>
-          </div>
-        `;
-
+        nowContainer.innerHTML = `<div><p class="text-blue-100 font-bold text-2xl uppercase tracking-[0.2em] mb-4 opacity-80 italic">กำลังดำเนินการมอบ / CURRENTLY PRESENTING</p><h3 class="text-8xl font-black text-white leading-tight mb-4 drop-shadow-2xl">${now.name}</h3><div class="h-1 w-32 bg-white/30 mx-auto mb-4 rounded-full"></div><p class="text-4xl text-blue-100 italic font-semibold opacity-90 leading-normal">${now.position}<br/>${now.address}</p></div>`;
         if (next) {
           nextContainer.classList.remove('hidden');
           nextContainer.classList.add('flex');
-          nextContainer.innerHTML = `
-            <div class="w-full">
-                <p class="text-slate-400 font-bold text-xl uppercase tracking-[0.1em] mb-3 italic">ลำดับต่อไป / UP NEXT</p>
-                <h3 class="text-6xl font-black text-white/95 leading-tight mb-3">${next.name}</h3>
-                <p class="text-2xl text-slate-400 italic opacity-80">${next.position} | ${next.address}</p>
-            </div>
-          `;
-        } else {
-          nextContainer.classList.add('hidden');
-        }
-      } else {
-        nowContainer.parentElement.classList.add('hidden');
-        displayEmpty.classList.remove('hidden');
-      }
+          nextContainer.innerHTML = `<div class="w-full"><p class="text-slate-400 font-bold text-xl uppercase tracking-[0.1em] mb-3 italic">ลำดับต่อไป / UP NEXT</p><h3 class="text-6xl font-black text-white/95 leading-tight mb-3">${next.name}</h3><p class="text-2xl text-slate-400 italic opacity-80 leading-normal">${next.position} | ${next.address}</p></div>`;
+        } else { nextContainer.classList.add('hidden'); }
+      } else { nowContainer.parentElement.classList.add('hidden'); displayEmpty.classList.remove('hidden'); }
 
-      // MC View
+      // MC View (Fixing text overlap)
       document.getElementById('mcCurrentEventTitle').innerText = appState.currentEvent;
       const firstPendingIdx = currentList.findIndex(p => !p.isGiven);
       document.getElementById('mcQueueContainer').innerHTML = currentList.map((p, idx) => {
         const isHighlight = idx === firstPendingIdx;
-        return `<div class="flex items-center gap-6 sm:gap-8 p-6 sm:p-8 rounded-[40px] transition-all duration-700 border-4 ${p.isGiven ? 'bg-emerald-900/20 grayscale opacity-40 scale-95 border-emerald-500/20' : (isHighlight ? 'bg-gradient-to-br from-blue-600 to-blue-800 scale-105 next-highlight border-blue-400' : 'bg-slate-900 border-slate-800 opacity-60')}"><div class="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl flex-shrink-0 flex items-center justify-center text-2xl sm:text-5xl font-black italic shadow-inner ${isHighlight ? 'bg-white text-blue-900 rotate-[-5deg]' : 'bg-slate-800 text-slate-500'}">${p.order}</div>${p.photo ? `<img src="${p.photo}" class="w-20 h-20 sm:w-32 sm:h-32 rounded-3xl border-4 border-white/20 object-cover shadow-2xl zoom-img" onclick="viewLargeImage(this.src)">` : ''}<div class="flex-1 text-left"><div class="text-[10px] sm:text-sm font-bold text-blue-400 tracking-widest mb-1">รหัสของที่ระลึก: ${formatSid(p.souvenirId)}</div><h2 class="font-black text-xl sm:text-6xl ${isHighlight ? 'text-white' : 'text-slate-300'}">${p.isGiven?'✓ ':''}${p.name}</h2><p class="font-bold italic text-sm sm:text-2xl ${isHighlight ? 'text-blue-100' : 'text-slate-500'}">${p.position} | ${p.address}</p></div><div class="flex flex-col items-end gap-3">${p.isGiven ? '<div class="text-emerald-400 font-black text-lg sm:text-3xl border-4 border-emerald-400 px-4 sm:px-8 py-2 sm:py-3 rounded-3xl rotate-6 bg-emerald-400/10">มอบแล้ว</div>' : (isHighlight ? '<div class="text-yellow-400 font-black text-sm sm:text-2xl bg-yellow-400/10 px-4 py-2 border-2 border-yellow-400/50 rounded-2xl animate-pulse">ลำดับต่อไป</div>' : '')}<button onclick="toggleGiven('${p.id}')" class="p-2 sm:p-4 rounded-full bg-white/10 hover:bg-emerald-50 hover:text-white transition-all border border-white/20 group" title="พิธีกรกดมอบ">${getIcon('check', 'w-6 h-6')}</button></div></div>`}).join('') || '<p class="text-center text-slate-700 text-2xl italic">กำลังรอผู้ลงทะเบียน...</p>';
+        return `<div class="flex items-center gap-6 sm:gap-8 p-6 sm:p-8 rounded-[40px] transition-all duration-700 border-4 ${p.isGiven ? 'bg-emerald-900/20 grayscale opacity-40 scale-95 border-emerald-500/20' : (isHighlight ? 'bg-gradient-to-br from-blue-600 to-blue-800 scale-105 next-highlight border-blue-400' : 'bg-slate-900 border-slate-800 opacity-60')}"><div class="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl flex-shrink-0 flex items-center justify-center text-2xl sm:text-5xl font-black italic shadow-inner ${isHighlight ? 'bg-white text-blue-900 rotate-[-5deg]' : 'bg-slate-800 text-slate-500'}">${p.order}</div>${p.photo ? `<img src="${p.photo}" class="w-20 h-20 sm:w-32 sm:h-32 rounded-3xl border-4 border-white/20 object-cover shadow-2xl zoom-img" onclick="viewLargeImage(this.src)">` : ''}<div class="flex-1 text-left"><div class="text-[10px] sm:text-sm font-bold text-blue-400 tracking-widest mb-1 uppercase">รหัส: ${formatSid(p.souvenirId)}</div><h2 class="font-black text-xl sm:text-5xl ${isHighlight ? 'text-white' : 'text-slate-300'} leading-tight mb-2">${p.isGiven?'✓ ':''}${p.name}</h2><p class="font-bold italic text-sm sm:text-2xl ${isHighlight ? 'text-blue-100' : 'text-slate-500'} leading-normal">${p.position}<br/><span class="opacity-70 text-[0.8em] font-normal">${p.address}</span></p></div><div class="flex flex-col items-end gap-3">${p.isGiven ? '<div class="text-emerald-400 font-black text-lg sm:text-3xl border-4 border-emerald-400 px-4 sm:px-8 py-2 sm:py-3 rounded-3xl rotate-6 bg-emerald-400/10">มอบแล้ว</div>' : (isHighlight ? '<div class="text-yellow-400 font-black text-sm sm:text-2xl bg-yellow-400/10 px-4 py-2 border-2 border-yellow-400/50 rounded-2xl animate-pulse">ลำดับต่อไป</div>' : '')}<button onclick="toggleGiven('${p.id}')" class="p-2 sm:p-4 rounded-full bg-white/10 hover:bg-emerald-50 hover:text-white transition-all border border-white/20 group" title="พิธีกรกดมอบ">${getIcon('check', 'w-6 h-6')}</button></div></div>`}).join('') || '<p class="text-center text-slate-700 text-2xl italic py-20">รอผู้ลงทะเบียนครับคุณครูหนึ่ง...</p>';
+
+      // Report View (Ensuring it redraws properly)
+      const reportTitle = document.getElementById('reportMainTitle');
+      const reportEventTitle = document.getElementById('reportEventTitle');
+      const reportDate = document.getElementById('reportDateText');
+      const reportCount = document.getElementById('reportPageText');
+      const reportHeader = document.getElementById('reportTableHeader');
+      const reportBody = document.getElementById('reportTableBody');
+
+      if (reportTitle && appState.activeTab === 'report') {
+        reportTitle.innerText = appState.reportType === 'blank' ? 'แบบฟอร์มลงทะเบียน (เขียนมือ)' : 'สรุปรายชื่อผู้มอบของที่ระลึก';
+        reportEventTitle.innerText = appState.currentEvent || '................................................';
+        reportDate.innerText = `พิมพ์วันที่: ${new Date().toLocaleDateString('th-TH')}`;
+        reportCount.innerText = `จำนวนผู้มอบ: ${currentList.length} ท่าน`;
+        
+        if(appState.reportType === 'data') {
+          reportHeader.innerHTML = `<tr class="bg-slate-900 text-white"><th class="border border-slate-900 p-2 w-16 text-sm">คิว</th><th class="border border-slate-900 p-2 w-20 text-[10px]">เลขที่ของ</th><th class="border border-slate-900 p-2 w-20 text-sm text-center">ภาพ</th><th class="border border-slate-900 p-2 text-left w-1/3 text-sm">ชื่อ-นามสกุล</th><th class="border border-slate-900 p-2 text-left text-sm">ตำแหน่ง/หน่วยงาน</th></tr>`;
+          reportBody.innerHTML = currentList.map(p => `<tr><td class="border border-slate-900 p-3 text-center font-bold text-xl bg-slate-50">${p.order}</td><td class="border border-slate-900 p-3 text-center font-black text-blue-700">${formatSid(p.souvenirId)}</td><td class="border border-slate-900 p-1 text-center">${p.photo ? `<img src="${p.photo}" class="w-12 h-12 object-cover rounded mx-auto border shadow-sm">` : '-'}</td><td class="border border-slate-900 p-3 font-bold text-lg leading-tight">${p.isGiven?'[✓] ':''}${p.name}</td><td class="border border-slate-900 p-3 text-sm font-bold text-slate-600 leading-tight">${p.position}<br/><span class="text-[10px] text-slate-400 font-normal">${p.address}</span></td></tr>`).join('') || '<tr><td colspan="5" class="p-10 text-center italic text-slate-400">ยังไม่มีข้อมูล</td></tr>';
+        } else {
+          reportHeader.innerHTML = `<tr class="bg-slate-100 text-slate-900"><th class="border-2 border-slate-900 p-2 w-16">ลำดับ</th><th class="border-2 border-slate-900 p-2 w-1/3">ชื่อ-นามสกุล</th><th class="border-2 border-slate-900 p-2">ตำแหน่ง</th><th class="border-2 border-slate-900 p-2">หน่วยงาน/ที่อยู่</th><th class="border-2 border-slate-900 p-2 w-24 text-center">หมายเหตุ</th></tr>`;
+          let h = ''; for(let i=1;i<=20;i++) h += `<tr><td class="border-2 border-slate-900 p-4 h-14 text-center font-bold">${i}</td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td></tr>`;
+          reportBody.innerHTML = h;
+        }
+      }
     }
 
     function switchTab(t) {
@@ -434,7 +463,6 @@
       document.getElementById(`view-${t}`).classList.remove('hidden');
       document.querySelectorAll('.tab-btn').forEach(b => b.className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white");
       document.getElementById(`tab-${t}`).className = "tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-lg";
-      
       if(t === 'report') document.getElementById(`view-${t}`).classList.add('flex');
       
       clearInterval(appState.mcInterval);
