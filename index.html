@@ -33,6 +33,15 @@
     }
     .rotate-anim { animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* สำหรับหน้าจอ Display */
+    .display-card-now {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+      box-shadow: 0 20px 50px rgba(30, 64, 175, 0.3);
+    }
+    .display-card-next {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -77,9 +86,10 @@
         <div class="font-bold text-lg flex items-center gap-2 text-blue-400 uppercase tracking-tighter">
             SOUVENIR SYSTEM <span class="hidden sm:inline">| ระบบลงทะเบียนของที่ระลึก</span>
         </div>
-        <div class="flex bg-slate-800 p-1 rounded-xl">
+        <div class="flex bg-slate-800 p-1 rounded-xl overflow-x-auto whitespace-nowrap scrollbar-hide">
           <button onclick="switchTab('staff')" id="tab-staff" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-blue-600 text-white shadow-lg">สตาฟ</button>
-          <button onclick="switchTab('mc')" id="tab-mc" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white">พิธีกร</button>
+          <button onclick="switchTab('display')" id="tab-display" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white">จอแสดงคิว</button>
+          <button onclick="switchTab('mc')" id="tab-mc" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white">จอพิธีกร</button>
           <button onclick="switchTab('report')" id="tab-report" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-white">รายงาน</button>
         </div>
     </div>
@@ -135,17 +145,40 @@
             <div class="flex justify-between items-center mb-6">
               <div class="flex items-center gap-3">
                 <h2 class="text-lg font-bold text-slate-800 italic text-nowrap">คิวปัจจุบัน (<span id="queueCount">0</span>)</h2>
-                <!-- ปุ่มรีเฟรชข้อมูลสำหรับหน้าสตาฟ -->
                 <button onclick="refreshStaffData()" id="staffRefreshBtn" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all shadow-sm flex items-center gap-1.5 text-xs font-bold group" title="กดเพื่ออัปเดตข้อมูลจากฐานข้อมูล">
                     <span id="refreshIconWrapper"></span> ดึงข้อมูลล่าสุด
                 </button>
               </div>
               <button id="saveOrderBtn" onclick="saveQueueOrder()" class="hidden px-5 py-2.5 bg-amber-500 text-white rounded-xl font-bold shadow-xl animate-save flex items-center gap-2">อัปเดตลำดับจอพิธีกร</button>
             </div>
-            <div id="queueListContainer" class="overflow-y-auto space-y-3 pr-2 flex-1"></div>
+            <div id="queueListContainer" class="overflow-y-auto space-y-3 pr-2 flex-1 scrollbar-thin"></div>
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- VIEW DISPLAY (หน้าจอแสดงผลคิวใหญ่) -->
+    <div id="view-display" class="view-section hidden min-h-[85vh] flex flex-col items-center justify-center space-y-12 py-10 bg-slate-100 rounded-[50px] shadow-inner border-8 border-white">
+        <div class="text-center">
+            <h1 class="text-3xl font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Souvenir Sequence</h1>
+            <h2 id="displayCurrentEventTitle" class="text-4xl font-bold text-blue-900 italic"></h2>
+        </div>
+
+        <div class="w-full max-w-6xl grid grid-cols-1 gap-12 px-6">
+            <!-- ลำดับที่กำลังมอบ -->
+            <div id="displayNowContainer" class="display-card-now rounded-[60px] p-12 text-white flex items-center gap-12 border-b-8 border-blue-800">
+                <!-- Content here by JS -->
+            </div>
+
+            <!-- ลำดับถัดไป -->
+            <div id="displayNextContainer" class="display-card-next rounded-[50px] p-10 text-white/90 flex items-center gap-10 opacity-90 scale-95 border-b-8 border-slate-900">
+                <!-- Content here by JS -->
+            </div>
+        </div>
+        
+        <div id="displayEmpty" class="hidden flex flex-col items-center justify-center p-20 text-slate-300 italic text-4xl">
+            กำลังรอผู้มอบลำดับถัดไป...
+        </div>
     </div>
 
     <!-- VIEW MC -->
@@ -198,7 +231,7 @@
             <input type="text" id="newEventName" class="flex-1 p-3 border rounded-xl outline-none focus:ring-2 focus:ring-green-500" placeholder="ชื่อโครงการใหม่..." />
             <button onclick="handleAddEvent()" class="bg-green-600 text-white px-5 rounded-xl font-bold hover:bg-green-700">เพิ่ม</button>
         </div>
-        <div id="eventListModalContainer" class="space-y-2 max-h-[300px] overflow-y-auto pr-2"></div>
+        <div id="eventListModalContainer" class="space-y-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin"></div>
       </div>
     </div>
   </div>
@@ -238,9 +271,7 @@
         document.getElementById('imageModal').classList.add('hidden');
     }
 
-    // --- Core Refresh Function ---
     async function initApp() {
-      // หน้าสตาฟ: ถ้ามีปุ่มเซฟคิวค้างไว้ ห้ามรีเฟรชเด็ดขาดเพื่อไม่ให้ข้อมูลโดด
       if (appState.activeTab === 'staff' && !document.getElementById('saveOrderBtn').classList.contains('hidden')) return;
 
       const result = await callAPI({ action: 'GET_ALL_DATA' });
@@ -256,13 +287,12 @@
       }
     }
 
-    // ฟังก์ชันกดดึงข้อมูลเองหน้าสตาฟ
     async function refreshStaffData() {
         const btn = document.getElementById('staffRefreshBtn');
-        const icon = btn.querySelector('svg');
-        icon.classList.add('rotate-anim');
+        const iconWrapper = document.getElementById('refreshIconWrapper').querySelector('svg');
+        iconWrapper.classList.add('rotate-anim');
         await initApp();
-        setTimeout(() => icon.classList.remove('rotate-anim'), 500);
+        setTimeout(() => iconWrapper.classList.remove('rotate-anim'), 500);
     }
 
     function showSyncing(show) { document.getElementById('syncingOverlay').classList[show ? 'remove' : 'add']('hidden'); }
@@ -282,7 +312,7 @@
 
     async function handleSubmit(e) {
       e.preventDefault();
-      if(!appState.currentEvent) return alert('เลือกงานก่อนครับคุณครูหนึ่ง');
+      if(!appState.currentEvent) return alert('กรุณาเลือกงานก่อนลงทะเบียน');
       const name = document.getElementById('formName').value;
       showSyncing(true);
       const res = await callAPI({ action: 'ADD_PARTICIPANT', event: appState.currentEvent, name: name, position: document.getElementById('formPosition').value, address: document.getElementById('formAddress').value, photo: appState.photoDataUrl });
@@ -315,12 +345,9 @@
     function moveUp(idx) {
       let list = appState.participants.filter(p => p.event === appState.currentEvent).sort((a,b) => a.order - b.order);
       let others = appState.participants.filter(p => p.event !== appState.currentEvent);
-      if (idx <= 0) return;
-      if (list[idx].isGiven || list[idx-1].isGiven) return alert('ล็อครายการที่มอบไปแล้วครับคุณครูหนึ่ง');
-      
+      if (idx <= 0 || list[idx].isGiven || list[idx-1].isGiven) return;
       [list[idx-1], list[idx]] = [list[idx], list[idx-1]];
       list.forEach((p, i) => p.order = i + 1);
-      
       appState.participants = [...others, ...list];
       document.getElementById('saveOrderBtn').classList.remove('hidden');
       updateUI();
@@ -329,31 +356,81 @@
     function moveDown(idx) {
       let list = appState.participants.filter(p => p.event === appState.currentEvent).sort((a,b) => a.order - b.order);
       let others = appState.participants.filter(p => p.event !== appState.currentEvent);
-      if (idx >= list.length - 1) return;
-      if (list[idx].isGiven || list[idx+1].isGiven) return alert('ล็อครายการที่มอบไปแล้วครับคุณครูหนึ่ง');
-      
+      if (idx >= list.length - 1 || list[idx].isGiven || list[idx+1].isGiven) return;
       [list[idx+1], list[idx]] = [list[idx], list[idx+1]];
       list.forEach((p, i) => p.order = i + 1);
-      
       appState.participants = [...others, ...list];
       document.getElementById('saveOrderBtn').classList.remove('hidden');
       updateUI();
     }
 
     function updateUI() {
+      const currentList = appState.participants.filter(p => p.event === appState.currentEvent).sort((a,b) => a.order - b.order);
+      const pendingList = currentList.filter(p => !p.isGiven);
+      
+      // Update Selection
       const sel = document.getElementById('currentEventSelect');
       sel.innerHTML = appState.events.length ? appState.events.map(e => `<option value="${e}" ${e === appState.currentEvent ? 'selected' : ''}>${e}</option>`).join('') : '<option value="">-- กรุณาเพิ่มงานใหม่ --</option>';
-
-      const currentList = appState.participants.filter(p => p.event === appState.currentEvent).sort((a,b) => a.order - b.order);
       document.getElementById('queueCount').innerText = currentList.length;
-
-      document.getElementById('eventListModalContainer').innerHTML = appState.events.map(e => `<div class="flex justify-between items-center p-4 bg-slate-50 border rounded-xl hover:bg-white transition-all shadow-sm"><span class="font-bold text-slate-700">${e}</span><button onclick="handleDeleteEvent('${e}')" class="text-red-400 hover:text-red-600 transition p-2 font-bold">ลบ</button></div>`).join('') || '<p class="text-center text-slate-400 text-sm italic">ยังไม่มีรายการงาน</p>';
 
       // Staff List
       document.getElementById('queueListContainer').innerHTML = currentList.map((p, idx) => {
         const canMoveUp = idx > 0 && !p.isGiven && !currentList[idx-1].isGiven;
         const canMoveDown = idx < currentList.length - 1 && !p.isGiven && !currentList[idx+1].isGiven;
         return `<div class="flex items-center gap-4 p-4 border rounded-2xl shadow-sm ${p.isGiven ? 'bg-emerald-50 opacity-80' : 'bg-white hover:border-blue-200'} transition-all"><div class="flex flex-col gap-1 pr-3 border-r"><button onclick="moveUp(${idx})" class="w-10 h-10 bg-slate-800 rounded-lg text-white flex items-center justify-center hover:bg-black transition-colors" ${!canMoveUp ? 'disabled style="opacity:0.1; cursor:not-allowed;"' : ''}>${getIcon('up', 'w-6 h-6')}</button><button onclick="moveDown(${idx})" class="w-10 h-10 bg-slate-800 rounded-lg text-white flex items-center justify-center hover:bg-black transition-colors" ${!canMoveDown ? 'disabled style="opacity:0.1; cursor:not-allowed;"' : ''}>${getIcon('down', 'w-6 h-6')}</button></div><div class="text-center min-w-[50px]"><div class="text-[9px] font-black text-slate-400 leading-none uppercase">Queue</div><div class="text-2xl font-black text-slate-900 leading-tight">${p.order}</div></div><div class="w-14 h-14 bg-slate-200 rounded-lg flex-shrink-0 border-2 border-white shadow overflow-hidden">${p.photo ? `<img src="${p.photo}" class="w-full h-full object-cover zoom-img" onclick="viewLargeImage(this.src)">` : `<div class="w-full h-full flex items-center justify-center text-slate-400 italic text-[9px]">NO IMG</div>`}</div><div class="flex-1 min-w-0"><div class="text-[9px] font-black text-blue-500 uppercase flex items-center gap-1">${p.isGiven ? getIcon('lock', 'w-2.5 h-2.5 text-emerald-600 mb-0.5') : ''}เลขที่ของที่ระลึก: ${formatSid(p.souvenirId)}</div><h4 class="font-black text-lg ${p.isGiven?'text-emerald-800 line-through opacity-50':'' } truncate leading-tight">${p.name}</h4><p class="text-xs text-slate-500 font-bold truncate">${p.position} | ${p.address}</p></div><div class="flex flex-col gap-2"><button onclick="toggleGiven('${p.id}')" class="px-4 py-2 rounded-xl text-sm font-black border-2 transition shadow-sm active:scale-95 ${p.isGiven?'bg-emerald-600 text-white border-emerald-600':'bg-white text-slate-600 border-slate-200 hover:border-emerald-500'}">${p.isGiven ? 'มอบแล้ว' : 'ติ๊กมอบ'}</button><button onclick="handleDeleteParticipant('${p.id}')" class="text-[9px] font-bold text-red-300 hover:text-red-500 text-right uppercase">Delete</button></div></div>`}).join('') || '<div class="h-full flex items-center justify-center text-slate-300 italic text-center px-4">ยังไม่มีใครลงทะเบียนครับคุณครูหนึ่งคนหล่อ</div>';
+
+      // --- New UI: Display View (Now & Next Only) ---
+      document.getElementById('displayCurrentEventTitle').innerText = appState.currentEvent;
+      const nowContainer = document.getElementById('displayNowContainer');
+      const nextContainer = document.getElementById('displayNextContainer');
+      const displayEmpty = document.getElementById('displayEmpty');
+
+      if (pendingList.length > 0) {
+        displayEmpty.classList.add('hidden');
+        nowContainer.parentElement.classList.remove('hidden');
+        
+        const now = pendingList[0];
+        const next = pendingList.length > 1 ? pendingList[1] : null;
+
+        nowContainer.innerHTML = `
+          <div class="flex-shrink-0 flex flex-col items-center justify-center space-y-2">
+            <span class="text-xs font-black uppercase tracking-[0.4em] opacity-60">Presenter Queue</span>
+            <div class="w-32 h-32 bg-white text-blue-900 rounded-[35px] flex items-center justify-center text-7xl font-black shadow-inner italic">${now.order}</div>
+          </div>
+          <div class="w-48 h-48 rounded-[40px] overflow-hidden border-4 border-white/40 shadow-2xl flex-shrink-0">
+            ${now.photo ? `<img src="${now.photo}" class="w-full h-full object-cover">` : `<div class="w-full h-full bg-blue-800/50 flex items-center justify-center text-blue-200"><svg class="w-16 h-16" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg></div>`}
+          </div>
+          <div class="flex-1">
+            <p class="text-blue-200 font-bold text-xl uppercase tracking-widest mb-1">กำลังดำเนินการมอบ / Current PRESENTING</p>
+            <h3 class="text-7xl font-black text-white leading-tight mb-2 drop-shadow-lg">${now.name}</h3>
+            <p class="text-3xl text-blue-100 italic font-semibold">${now.position} | ${now.address}</p>
+          </div>
+        `;
+
+        if (next) {
+          nextContainer.classList.remove('hidden');
+          nextContainer.classList.add('flex');
+          nextContainer.innerHTML = `
+            <div class="flex-shrink-0 flex flex-col items-center justify-center space-y-1">
+              <span class="text-[10px] font-bold uppercase opacity-50">Next</span>
+              <div class="w-20 h-20 bg-slate-700 text-white rounded-3xl flex items-center justify-center text-4xl font-black italic border border-white/10">${next.order}</div>
+            </div>
+            <div class="w-24 h-24 rounded-3xl overflow-hidden border-2 border-white/20 shadow-xl flex-shrink-0">
+              ${next.photo ? `<img src="${next.photo}" class="w-full h-full object-cover grayscale opacity-80">` : `<div class="w-full h-full bg-slate-800 flex items-center justify-center text-slate-500"><svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg></div>`}
+            </div>
+            <div class="flex-1">
+                <p class="text-slate-400 font-bold text-sm uppercase tracking-wider mb-0.5">ลำดับต่อไป / UP NEXT</p>
+                <h3 class="text-4xl font-black text-white/90 truncate">${next.name}</h3>
+                <p class="text-lg text-slate-400 italic">${next.position} | ${next.address}</p>
+            </div>
+          `;
+        } else {
+          nextContainer.classList.add('hidden');
+        }
+      } else {
+        nowContainer.parentElement.classList.add('hidden');
+        displayEmpty.classList.remove('hidden');
+      }
 
       // MC View
       document.getElementById('mcCurrentEventTitle').innerText = appState.currentEvent;
@@ -362,20 +439,16 @@
         const isHighlight = idx === firstPendingIdx;
         return `<div class="flex items-center gap-6 sm:gap-8 p-6 sm:p-8 rounded-[40px] transition-all duration-700 border-4 ${p.isGiven ? 'bg-emerald-900/20 grayscale opacity-40 scale-95 border-emerald-500/20' : (isHighlight ? 'bg-gradient-to-br from-blue-600 to-blue-800 scale-105 next-highlight border-blue-400' : 'bg-slate-900 border-slate-800 opacity-60')}"><div class="w-16 h-16 sm:w-24 sm:h-24 rounded-3xl flex-shrink-0 flex items-center justify-center text-2xl sm:text-5xl font-black italic shadow-inner ${isHighlight ? 'bg-white text-blue-900 rotate-[-5deg]' : 'bg-slate-800 text-slate-500'}">${p.order}</div>${p.photo ? `<img src="${p.photo}" class="w-20 h-20 sm:w-32 sm:h-32 rounded-3xl border-4 border-white/20 object-cover shadow-2xl zoom-img" onclick="viewLargeImage(this.src)">` : ''}<div class="flex-1 text-left"><div class="text-[10px] sm:text-sm font-bold text-blue-400 tracking-widest mb-1">รหัสของที่ระลึก: ${formatSid(p.souvenirId)}</div><h2 class="font-black text-xl sm:text-6xl ${isHighlight ? 'text-white' : 'text-slate-300'}">${p.isGiven?'✓ ':''}${p.name}</h2><p class="font-bold italic text-sm sm:text-2xl ${isHighlight ? 'text-blue-100' : 'text-slate-500'}">${p.position} | ${p.address}</p></div><div class="flex flex-col items-end gap-3">${p.isGiven ? '<div class="text-emerald-400 font-black text-lg sm:text-3xl border-4 border-emerald-400 px-4 sm:px-8 py-2 sm:py-3 rounded-3xl rotate-6 bg-emerald-400/10">มอบแล้ว</div>' : (isHighlight ? '<div class="text-yellow-400 font-black text-sm sm:text-2xl bg-yellow-400/10 px-4 py-2 border-2 border-yellow-400/50 rounded-2xl animate-pulse">ลำดับต่อไป</div>' : '')}<button onclick="toggleGiven('${p.id}')" class="p-2 sm:p-4 rounded-full bg-white/10 hover:bg-emerald-50 hover:text-white transition-all border border-white/20 group" title="พิธีกรกดมอบ">${getIcon('check', 'w-6 h-6')}</button></div></div>`}).join('') || '<p class="text-center text-slate-700 text-2xl italic">กำลังรอผู้ลงทะเบียน...</p>';
 
+      // Report View
       document.getElementById('reportEventTitle').innerText = appState.currentEvent || '';
       document.getElementById('reportDateText').innerText = `พิมพ์วันที่: ${new Date().toLocaleDateString('th-TH')}`;
       document.getElementById('reportPageText').innerText = `จำนวนผู้มอบ: ${currentList.length} ท่าน`;
       if(appState.reportType === 'data') {
         document.getElementById('reportTableHeader').innerHTML = `<tr class="bg-slate-900 text-white"><th class="border border-slate-900 p-2 w-16 text-sm">คิว</th><th class="border border-slate-900 p-2 w-20 text-[10px]">เลขที่ของ</th><th class="border border-slate-900 p-2 w-20 text-sm">ภาพ</th><th class="border border-slate-900 p-2 text-left w-1/3 text-sm">ชื่อ-นามสกุล</th><th class="border border-slate-900 p-2 text-left text-sm">ตำแหน่ง/หน่วยงาน</th></tr>`;
         document.getElementById('reportTableBody').innerHTML = currentList.map(p => `<tr><td class="border border-slate-900 p-3 text-center font-bold text-xl bg-slate-50">${p.order}</td><td class="border border-slate-900 p-3 text-center font-black text-blue-700">${formatSid(p.souvenirId)}</td><td class="border border-slate-900 p-1 text-center">${p.photo ? `<img src="${p.photo}" class="w-12 h-12 object-cover rounded mx-auto border shadow-sm">` : '-'}</td><td class="border border-slate-900 p-3 font-bold text-lg">${p.isGiven?'[✓] ':''}${p.name}</td><td class="border border-slate-900 p-3 text-sm font-bold text-slate-600 leading-tight">${p.position}<br/><span class="text-[10px] text-slate-400 font-normal">${p.address}</span></td></tr>`).join('') || '<tr><td colspan="5" class="p-10 text-center italic text-slate-400">ไม่มีข้อมูล</td></tr>';
-      } else {
-        document.getElementById('reportTableHeader').innerHTML = `<tr class="bg-slate-100 text-slate-900"><th class="border-2 border-slate-900 p-2 w-16">ลำดับ</th><th class="border-2 border-slate-900 p-2 w-1/3">ชื่อ-นามสกุล</th><th class="border-2 border-slate-900 p-2">ตำแหน่ง</th><th class="border-2 border-slate-900 p-2">หน่วยงาน/ที่อยู่</th><th class="border-2 border-slate-900 p-2 w-24">หมายเหตุ</th></tr>`;
-        let h = ''; for(let i=1;i<=20;i++) h += `<tr><td class="border-2 border-slate-900 p-4 h-14 text-center font-bold">${i}</td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td><td class="border-2 border-slate-900 p-4"></td></tr>`;
-        document.getElementById('reportTableBody').innerHTML = h;
       }
     }
 
-    // --- ส่วนการจัดการ Tab และ Interval ---
     function switchTab(t) {
       appState.activeTab = t;
       document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
@@ -385,14 +458,10 @@
       
       if(t === 'report') document.getElementById(`view-${t}`).classList.add('flex');
       
-      // ล้าง Interval เดิมก่อนเสมอ
       clearInterval(appState.mcInterval);
-      
-      // เงื่อนไขใหม่: หน้าสตาฟไม่ต้องออโต้รีเฟรช / หน้า MC และ Report ออโต้รีเฟรชทุก 1 วิ
-      if(t === 'mc' || t === 'report') {
+      if(t !== 'staff') {
           appState.mcInterval = setInterval(() => initApp(), 1000);
       }
-      
       updateUI();
     }
 
@@ -413,7 +482,6 @@
     function changeReportType(t) { appState.reportType = t; updateUI(); }
     function changeCurrentEvent() { appState.currentEvent = document.getElementById('currentEventSelect').value; updateUI(); }
 
-    // เริ่มต้นแอป
     initApp();
   </script>
 </body>
