@@ -27,7 +27,7 @@
 
   <!-- Loading Overlay -->
   <div id="loadingOverlay" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center text-blue-800">
-    <div class="animate-spin mb-4"><i data-lucide="loader-2" class="w-12 h-12"></i></div>
+    <div class="animate-spin mb-4" id="loaderIconContainer"><i data-lucide="loader-2" class="w-12 h-12"></i></div>
     <h2 class="text-xl font-bold">กำลังเชื่อมต่อฐานข้อมูล Google Sheets...</h2>
   </div>
 
@@ -236,7 +236,10 @@
   </div>
 
   <script>
-    lucide.createIcons();
+    // ป้องกันกรณีเน็ตช้าหรือโหลดไฟล์ไอคอนไม่สำเร็จ เพื่อไม่ให้สคริปต์ทั้งหมดพัง
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
     
     // --- State Variables ---
     let appState = {
@@ -255,28 +258,43 @@
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
+          redirect: "follow", // จัดการการเปลี่ยนเส้นทางของ Google Apps Script
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8", // ป้องกัน CORS Preflight Error
+          },
           body: JSON.stringify(payload),
         });
+        
+        if (!response.ok) {
+           throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         return await response.json();
       } catch (error) {
         console.error("API Error:", error);
-        alert("ไม่สามารถเชื่อมต่อกับ Google Sheets ได้");
+        alert("การเชื่อมต่อล้มเหลว: กรุณาตรวจสอบให้แน่ใจว่า Web App ตั้งค่า 'Who has access' เป็น 'Anyone' (ทุกคน)");
         return { status: 'error' };
       }
     }
 
     // --- Core Functions ---
     async function initApp() {
-      const result = await callAPI({ action: 'GET_ALL_DATA' });
-      document.getElementById('loadingOverlay').classList.add('hidden');
-      
-      if (result && result.status === 'success') {
-        appState.events = result.events || [];
-        appState.participants = result.participants || [];
-        if (appState.events.length > 0) {
-          appState.currentEvent = appState.events[0];
+      try {
+        const result = await callAPI({ action: 'GET_ALL_DATA' });
+        
+        if (result && result.status === 'success') {
+          appState.events = result.events || [];
+          appState.participants = result.participants || [];
+          if (appState.events.length > 0) {
+            appState.currentEvent = appState.events[0];
+          }
+          updateUI();
         }
-        updateUI();
+      } catch (e) {
+        console.error("Initialization error:", e);
+      } finally {
+        // บังคับปิดหน้าจอโหลดเสมอ ไม่ว่าจะดึงข้อมูลสำเร็จหรือไม่
+        document.getElementById('loadingOverlay').classList.add('hidden');
       }
     }
 
@@ -528,7 +546,10 @@
         document.getElementById('reportSignatures').classList.remove('hidden');
       }
       
-      lucide.createIcons();
+      // ป้องกันการ Error หากโหลดไอคอนไม่สำเร็จ
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
     }
 
     function switchTab(tab) {
